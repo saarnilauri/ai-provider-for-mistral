@@ -1,5 +1,5 @@
 === AI Provider for Mistral ===
-Contributors: WordPress AI Team
+Contributors: laurisaarni
 Tags: ai, mistral, machine-learning, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 6.9
