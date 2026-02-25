@@ -8,6 +8,7 @@ use AiProviderForMistral\Provider\ProviderForMistral;
 use AiProviderForMistral\Tests\Integration\Traits\IntegrationTestTrait;
 use PHPUnit\Framework\TestCase;
 use WordPress\AiClient\AiClient;
+use WordPress\AiClient\Common\Exception\TokenLimitReachedException;
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Providers\ProviderRegistry;
 use WordPress\AiClient\Results\DTO\GenerativeAiResult;
@@ -76,6 +77,19 @@ class TextGenerationIntegrationTest extends TestCase
 
         $this->assertInstanceOf(GenerativeAiResult::class, $result);
         $this->assertStringContainsStringIgnoringCase('Matt Mullenweg', $result->toText());
+    }
+
+    /**
+     * Tests that generateTextResult() throws TokenLimitReachedException when max_tokens is exceeded.
+     */
+    public function testTextGenerationThrowsOnTokenLimitReached(): void
+    {
+        $this->expectException(TokenLimitReachedException::class);
+
+        AiClient::prompt('Count from 1 to 1000, writing each number on its own line.', $this->registry)
+            ->usingProvider('mistral')
+            ->usingMaxTokens(5)
+            ->generateTextResult();
     }
 
     /**

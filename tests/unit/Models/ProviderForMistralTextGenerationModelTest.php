@@ -12,6 +12,7 @@ use WordPress\AiClient\Providers\DTO\ProviderMetadata;
 use WordPress\AiClient\Providers\Http\Contracts\HttpTransporterInterface;
 use WordPress\AiClient\Providers\Http\Contracts\RequestAuthenticationInterface;
 use WordPress\AiClient\Providers\Http\DTO\Response;
+use WordPress\AiClient\Common\Exception\TokenLimitReachedException;
 use WordPress\AiClient\Providers\Http\Exception\ClientException;
 use WordPress\AiClient\Providers\Models\DTO\ModelConfig;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
@@ -152,6 +153,93 @@ class ProviderForMistralTextGenerationModelTest extends TestCase
         $this->expectExceptionMessage('Unauthorized (401) - Invalid API key');
 
         $model->generateTextResult($prompt);
+    }
+
+    /**
+     * Tests that generateTextResult() throws TokenLimitReachedException when finish_reason is "length".
+     */
+    public function testGenerateTextResultThrowsOnLengthFinishReason(): void
+    {
+        $prompt = [new Message(MessageRoleEnum::user(), [new MessagePart('Hello')])];
+        $response = new Response(
+            200,
+            [],
+            json_encode([
+                'id' => 'chatcmpl_123',
+                'choices' => [
+                    [
+                        'message' => ['role' => 'assistant', 'content' => 'Truncated...'],
+                        'finish_reason' => 'length',
+                    ],
+                ],
+                'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 100, 'total_tokens' => 110],
+            ])
+        );
+
+        $this->mockRequestAuthentication
+            ->expects($this->once())
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        $this->mockHttpTransporter
+            ->expects($this->once())
+            ->method('send')
+            ->willReturn($response);
+
+        $config = new ModelConfig();
+        $config->setMaxTokens(100);
+        $model = $this->createModel($config);
+
+        $this->expectException(TokenLimitReachedException::class);
+        $this->expectExceptionMessage('Generation stopped due to token limit (100) with finish reason "length".');
+
+        $model->generateTextResult($prompt);
+    }
+
+    /**
+     * Tests that generateTextResult() throws TokenLimitReachedException without max tokens in message
+     * when no max_tokens is configured.
+     */
+    public function testGenerateTextResultThrowsOnLengthFinishReasonWithoutMaxTokens(): void
+    {
+        $prompt = [new Message(MessageRoleEnum::user(), [new MessagePart('Hello')])];
+        $response = new Response(
+            200,
+            [],
+            json_encode([
+                'id' => 'chatcmpl_123',
+                'choices' => [
+                    [
+                        'message' => ['role' => 'assistant', 'content' => 'Truncated...'],
+                        'finish_reason' => 'length',
+                    ],
+                ],
+                'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 100, 'total_tokens' => 110],
+            ])
+        );
+
+        $this->mockRequestAuthentication
+            ->expects($this->once())
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        $this->mockHttpTransporter
+            ->expects($this->once())
+            ->method('send')
+            ->willReturn($response);
+
+        $model = $this->createModel();
+
+        $exception = null;
+        try {
+            $model->generateTextResult($prompt);
+        } catch (TokenLimitReachedException $e) {
+            $exception = $e;
+        }
+
+        $this->assertInstanceOf(TokenLimitReachedException::class, $exception);
+        $this->assertNull($exception->getMaxTokens());
+        $this->assertStringContainsString('"length"', $exception->getMessage());
     }
 
     /**
