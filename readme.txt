@@ -3,7 +3,7 @@ Contributors: WordPress AI Team
 Tags: ai, mistral, machine-learning, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -48,6 +48,10 @@ Visit the [Mistral Console](https://console.mistral.ai/) to create an account an
 No, this plugin requires the PHP AI Client plugin to be installed and activated. It provides the Mistral-specific implementation that the PHP AI Client uses.
 
 == Changelog ==
+
+= 0.3.0 =
+* Rename plugin to "AI Provider for Mistral" (new slug: ai-provider-for-mistral, new namespace: AiProviderForMistral)
+* Throw TokenLimitReachedException when Mistral returns finish_reason "length"
 
 = 0.2.0 =
 * Rewrite the plugin to use better naming that reflects that this is independent product and it is not official Mistral product.
