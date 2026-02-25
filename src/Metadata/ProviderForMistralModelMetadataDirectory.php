@@ -103,6 +103,7 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
             new SupportedOption(OptionEnum::outputModalities(), [[ModalityEnum::text()]]),
         ]);
 
+        /** @var list<ModelData> $modelsData */
         $models = array_values(
             array_map(
                 static function (array $modelData) use ($textOnlyOptions, $visionOptions): ModelMetadata {
@@ -110,9 +111,9 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
                     $modelName = $modelData['name'] ?? $modelId;
 
                     $capabilityData = $modelData['capabilities'] ?? [];
-                    $supportsChat = is_array($capabilityData) && ($capabilityData['completion_chat'] ?? false);
-                    $supportsFunctionCalling = is_array($capabilityData) && ($capabilityData['function_calling'] ?? false);
-                    $supportsVision = is_array($capabilityData) && ($capabilityData['vision'] ?? false);
+                    $supportsChat = $capabilityData['completion_chat'] ?? false;
+                    $supportsFunctionCalling = $capabilityData['function_calling'] ?? false;
+                    $supportsVision = $capabilityData['vision'] ?? false;
 
                     if (!$supportsChat) {
                         return new ModelMetadata($modelId, $modelName, [], []);
