@@ -14,14 +14,16 @@ use WordPress\AiClient\Results\DTO\Candidate;
 /**
  * Class for text generation models used by the provider for Mistral.
  *
- * @since 1.0.0
+ * @since 0.1.0
+ *
+ * @phpstan-import-type ChoiceData from AbstractOpenAiCompatibleTextGenerationModel
  */
 class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleTextGenerationModel
 {
     /**
      * {@inheritDoc}
      *
-     * @since 1.0.0
+     * @since 0.1.0
      */
     protected function createRequest(
         HttpMethodEnum $method,

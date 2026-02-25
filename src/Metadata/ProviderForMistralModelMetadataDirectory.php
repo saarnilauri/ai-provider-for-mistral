@@ -19,7 +19,7 @@ use WordPress\AiClient\Providers\OpenAiCompatibleImplementation\AbstractOpenAiCo
 /**
  * Class for the model metadata directory used by the provider for Mistral.
  *
- * @since 1.0.0
+ * @since 0.1.0
  *
  * @phpstan-type ModelCapabilities array{
  *     completion_chat?: bool,
@@ -41,7 +41,7 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
     /**
      * {@inheritDoc}
      *
-     * @since 1.0.0
+     * @since 0.1.0
      */
     protected function createRequest(HttpMethodEnum $method, string $path, array $headers = [], $data = null): Request
     {
@@ -56,7 +56,7 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
     /**
      * {@inheritDoc}
      *
-     * @since 1.0.0
+     * @since 0.1.0
      */
     protected function parseResponseToModelMetadataList(Response $response): array
     {
@@ -154,6 +154,8 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
      * @param ModelMetadata $a First model.
      * @param ModelMetadata $b Second model.
      * @return int Comparison result.
+     * @since 0.1.0
+     *
      */
     protected function modelSortCallback(ModelMetadata $a, ModelMetadata $b): int
     {

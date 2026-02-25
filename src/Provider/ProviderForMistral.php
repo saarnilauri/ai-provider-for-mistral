@@ -20,14 +20,14 @@ use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
 /**
  * Class for the WordPress AI Client provider for Mistral.
  *
- * @since 1.0.0
+ * @since 0.1.0
  */
 class ProviderForMistral extends AbstractApiProvider
 {
     /**
      * {@inheritDoc}
      *
-     * @since 1.0.0
+     * @since 0.1.0
      */
     protected static function baseUrl(): string
     {
@@ -37,7 +37,7 @@ class ProviderForMistral extends AbstractApiProvider
     /**
      * {@inheritDoc}
      *
-     * @since 1.0.0
+     * @since 0.1.0
      */
     protected static function createModel(
         ModelMetadata $modelMetadata,
@@ -58,7 +58,7 @@ class ProviderForMistral extends AbstractApiProvider
     /**
      * {@inheritDoc}
      *
-     * @since 1.0.0
+     * @since 0.1.0
      */
     protected static function createProviderMetadata(): ProviderMetadata
     {
@@ -74,7 +74,7 @@ class ProviderForMistral extends AbstractApiProvider
     /**
      * {@inheritDoc}
      *
-     * @since 1.0.0
+     * @since 0.1.0
      */
     protected static function createProviderAvailability(): ProviderAvailabilityInterface
     {
@@ -87,7 +87,7 @@ class ProviderForMistral extends AbstractApiProvider
     /**
      * {@inheritDoc}
      *
-     * @since 1.0.0
+     * @since 0.1.0
      */
     protected static function createModelMetadataDirectory(): ModelMetadataDirectoryInterface
     {
