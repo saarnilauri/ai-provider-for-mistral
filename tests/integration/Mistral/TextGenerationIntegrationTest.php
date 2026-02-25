@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace WpAiClientProviderForMistral\Tests\Integration\Mistral;
+namespace AiProviderForMistral\Tests\Integration\Mistral;
 
+use AiProviderForMistral\Provider\ProviderForMistral;
+use AiProviderForMistral\Tests\Integration\Traits\IntegrationTestTrait;
 use PHPUnit\Framework\TestCase;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Providers\ProviderRegistry;
 use WordPress\AiClient\Results\DTO\GenerativeAiResult;
-use WpAiClientProviderForMistral\Provider\ProviderForMistral;
-use WpAiClientProviderForMistral\Tests\Integration\Traits\IntegrationTestTrait;
 
 /**
  * Integration tests for Mistral text generation.

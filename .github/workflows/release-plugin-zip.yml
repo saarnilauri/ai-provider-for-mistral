@@ -42,13 +42,13 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wp-ai-client-provider-for-mistral-zip
-          path: dist/wp-ai-client-provider-for-mistral.zip
+          name: ai-provider-for-mistral-zip
+          path: dist/ai-provider-for-mistral.zip
           if-no-files-found: error
 
       - name: Attach ZIP to GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/wp-ai-client-provider-for-mistral.zip
+          files: dist/ai-provider-for-mistral.zip
           generate_release_notes: true

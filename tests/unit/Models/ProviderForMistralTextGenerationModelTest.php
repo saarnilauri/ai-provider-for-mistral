@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WpAiClientProviderForMistral\Tests\Unit\Models;
+namespace AiProviderForMistral\Tests\Unit\Models;
 
 use PHPUnit\Framework\TestCase;
 use WordPress\AiClient\Messages\DTO\Message;
@@ -19,7 +19,7 @@ use WordPress\AiClient\Results\DTO\GenerativeAiResult;
 use WordPress\AiClient\Results\Enums\FinishReasonEnum;
 
 /**
- * @covers \WpAiClientProviderForMistral\Models\ProviderForMistralTextGenerationModel
+ * @covers \AiProviderForMistral\Models\ProviderForMistralTextGenerationModel
  */
 class ProviderForMistralTextGenerationModelTest extends TestCase
 {
@@ -50,7 +50,7 @@ class ProviderForMistralTextGenerationModelTest extends TestCase
         $this->modelMetadata = $this->createStub(ModelMetadata::class);
         $this->modelMetadata->method('getId')->willReturn('mistral-large-latest');
         $this->providerMetadata = $this->createStub(ProviderMetadata::class);
-        $this->providerMetadata->method('getName')->willReturn('WordPress AI Client Provider for Mistral');
+        $this->providerMetadata->method('getName')->willReturn('AI Provider for Mistral');
         $this->mockHttpTransporter = $this->createMock(HttpTransporterInterface::class);
         $this->mockRequestAuthentication = $this->createMock(RequestAuthenticationInterface::class);
     }

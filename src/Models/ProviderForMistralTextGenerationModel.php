@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
-namespace WpAiClientProviderForMistral\Models;
+namespace AiProviderForMistral\Models;
 
+use AiProviderForMistral\Provider\ProviderForMistral;
+use WordPress\AiClient\Common\Exception\TokenLimitReachedException;
 use WordPress\AiClient\Providers\Http\DTO\Request;
 use WordPress\AiClient\Providers\Http\Enums\HttpMethodEnum;
 use WordPress\AiClient\Providers\OpenAiCompatibleImplementation\AbstractOpenAiCompatibleTextGenerationModel;
-use WpAiClientProviderForMistral\Provider\ProviderForMistral;
+use WordPress\AiClient\Results\DTO\Candidate;
 
 /**
  * Class for text generation models used by the provider for Mistral.

@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace WpAiClientProviderForMistral\Metadata;
+namespace AiProviderForMistral\Metadata;
 
+use AiProviderForMistral\Provider\ProviderForMistral;
 use WordPress\AiClient\Messages\Enums\ModalityEnum;
 use WordPress\AiClient\Providers\Http\DTO\Request;
 use WordPress\AiClient\Providers\Http\DTO\Response;
@@ -14,7 +15,6 @@ use WordPress\AiClient\Providers\Models\DTO\SupportedOption;
 use WordPress\AiClient\Providers\Models\Enums\CapabilityEnum;
 use WordPress\AiClient\Providers\Models\Enums\OptionEnum;
 use WordPress\AiClient\Providers\OpenAiCompatibleImplementation\AbstractOpenAiCompatibleModelMetadataDirectory;
-use WpAiClientProviderForMistral\Provider\ProviderForMistral;
 
 /**
  * Class for the model metadata directory used by the provider for Mistral.
@@ -149,8 +149,6 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
 
     /**
      * Callback function for sorting models by ID, to be used with `usort()`.
-     *
-     * @since 1.0.0
      *
      * @param ModelMetadata $a First model.
      * @param ModelMetadata $b Second model.

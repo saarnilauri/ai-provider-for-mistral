@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-namespace WpAiClientProviderForMistral\Tests\Integration\Mistral;
+namespace AiProviderForMistral\Tests\Integration\Mistral;
 
+use AiProviderForMistral\Provider\ProviderForMistral;
+use AiProviderForMistral\Tests\Integration\Traits\IntegrationTestTrait;
 use PHPUnit\Framework\TestCase;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Messages\DTO\MessagePart;
@@ -13,8 +15,6 @@ use WordPress\AiClient\Results\DTO\GenerativeAiResult;
 use WordPress\AiClient\Tools\DTO\FunctionCall;
 use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
 use WordPress\AiClient\Tools\DTO\FunctionResponse;
-use WpAiClientProviderForMistral\Provider\ProviderForMistral;
-use WpAiClientProviderForMistral\Tests\Integration\Traits\IntegrationTestTrait;
 
 /**
  * Integration tests for Mistral function calling.

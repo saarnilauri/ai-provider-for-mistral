@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PLUGIN_SLUG="wp-ai-client-provider-for-mistral"
+PLUGIN_SLUG="ai-provider-for-mistral"
 DIST_DIR="${ROOT_DIR}/dist"
 STAGING_DIR="${DIST_DIR}/${PLUGIN_SLUG}"
 ZIP_PATH="${DIST_DIR}/${PLUGIN_SLUG}.zip"

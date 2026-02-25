@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace WpAiClientProviderForMistral\Tests\Unit\Metadata;
+namespace AiProviderForMistral\Tests\Unit\Metadata;
 
+use AiProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory;
 use WordPress\AiClient\Providers\Http\DTO\Response;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
-use WpAiClientProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory;
 
 /**
  * Mock class for testing ProviderForMistralModelMetadataDirectory.

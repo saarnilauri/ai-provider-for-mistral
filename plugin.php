@@ -1,8 +1,8 @@
 <?php
 
 /**
- * Plugin Name: WordPress AI Client Provider for Mistral
- * Plugin URI: https://github.com/saarnilauri/wp-ai-client-provider-for-mistral
+ * Plugin Name: AI Provider for Mistral
+ * Plugin URI: https://github.com/saarnilauri/ai-provider-for-mistral
  * Description: Independent WordPress AI Client provider for Mistral.
  * Requires at least: 6.9
  * Requires PHP: 7.4
@@ -11,17 +11,17 @@
  * Author URI: https://profiles.wordpress.org/laurisaarni/
  * License: GPL-2.0-or-later
  * License URI: https://spdx.org/licenses/GPL-2.0-or-later.html
- * Text Domain: wp-ai-client-provider-for-mistral
+ * Text Domain: ai-provider-for-mistral
  *
- * @package WpAiClientProviderForMistral
+ * @package AiProviderForMistral
  */
 
 declare(strict_types=1);
 
-namespace WpAiClientProviderForMistral;
+namespace AiProviderForMistral;
 
+use AiProviderForMistral\Provider\ProviderForMistral;
 use WordPress\AiClient\AiClient;
-use WpAiClientProviderForMistral\Provider\ProviderForMistral;
 
 if (!defined('ABSPATH')) {
     return;

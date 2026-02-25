@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace WpAiClientProviderForMistral\Tests\Unit\Models;
+namespace AiProviderForMistral\Tests\Unit\Models;
 
+use AiProviderForMistral\Models\ProviderForMistralTextGenerationModel;
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Providers\DTO\ProviderMetadata;
 use WordPress\AiClient\Providers\Http\Contracts\HttpTransporterInterface;
 use WordPress\AiClient\Providers\Http\Contracts\RequestAuthenticationInterface;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
-use WpAiClientProviderForMistral\Models\ProviderForMistralTextGenerationModel;
 
 /**
  * Mock class for testing ProviderForMistralTextGenerationModel.

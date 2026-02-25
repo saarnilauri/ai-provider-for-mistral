@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-namespace WpAiClientProviderForMistral\Provider;
+namespace AiProviderForMistral\Provider;
 
+use AiProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory;
+use AiProviderForMistral\Models\ProviderForMistralTextGenerationModel;
 use WordPress\AiClient\Common\Exception\RuntimeException;
 use WordPress\AiClient\Providers\ApiBasedImplementation\AbstractApiProvider;
 use WordPress\AiClient\Providers\ApiBasedImplementation\ListModelsApiBasedProviderAvailability;
@@ -14,8 +16,6 @@ use WordPress\AiClient\Providers\Enums\ProviderTypeEnum;
 use WordPress\AiClient\Providers\Http\Enums\RequestAuthenticationMethod;
 use WordPress\AiClient\Providers\Models\Contracts\ModelInterface;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
-use WpAiClientProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory;
-use WpAiClientProviderForMistral\Models\ProviderForMistralTextGenerationModel;
 
 /**
  * Class for the WordPress AI Client provider for Mistral.
@@ -64,7 +64,7 @@ class ProviderForMistral extends AbstractApiProvider
     {
         return new ProviderMetadata(
             'mistral',
-            'WordPress AI Client Provider for Mistral',
+            'AI Provider for Mistral',
             ProviderTypeEnum::cloud(),
             'https://console.mistral.ai/api-keys',
             RequestAuthenticationMethod::apiKey()

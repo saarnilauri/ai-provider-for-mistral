@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WpAiClientProviderForMistral\Tests\Integration\Traits;
+namespace AiProviderForMistral\Tests\Integration\Traits;
 
 /**
  * Trait providing shared functionality for integration tests.

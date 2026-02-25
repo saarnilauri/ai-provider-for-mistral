@@ -1,4 +1,4 @@
-# WordPress AI Client Provider for Mistral
+# AI Provider for Mistral
 
 A third-party provider for [Mistral](https://mistral.ai/) in the [PHP AI Client](https://github.com/WordPress/php-ai-client) SDK. Works as both a Composer package and a WordPress plugin.
 
@@ -14,14 +14,14 @@ This project is independent and is not affiliated with, endorsed by, or sponsore
 ### As a Composer Package
 
 ```bash
-composer require saarnilauri/wp-ai-client-provider-for-mistral
+composer require saarnilauri/ai-provider-for-mistral
 ```
 
 The Composer distribution is intended for library usage and excludes `plugin.php`.
 
 ### As a WordPress Plugin
 
-1. Download `wp-ai-client-provider-for-mistral.zip` from [GitHub Releases](https://github.com/saarnilauri/wp-ai-client-provider-for-mistral/releases) (do not use GitHub "Source code" archives)
+1. Download `ai-provider-for-mistral.zip` from [GitHub Releases](https://github.com/saarnilauri/ai-provider-for-mistral/releases) (do not use GitHub "Source code" archives)
 2. Upload the ZIP in WordPress admin via Plugins > Add New Plugin > Upload Plugin
 3. Ensure the PHP AI Client plugin is installed and activated
 4. Activate the plugin through the WordPress admin
@@ -36,7 +36,7 @@ make dist
 ./scripts/build-plugin-zip.sh
 ```
 
-The ZIP is created at `dist/wp-ai-client-provider-for-mistral.zip` and includes `plugin.php`.
+The ZIP is created at `dist/ai-provider-for-mistral.zip` and includes `plugin.php`.
 
 ## Testing
 
@@ -64,7 +64,7 @@ composer test:integration
 
 This repository includes a GitHub Actions workflow at `.github/workflows/release-plugin-zip.yml`:
 
-- On tag pushes matching `v*`, it builds `dist/wp-ai-client-provider-for-mistral.zip`
+- On tag pushes matching `v*`, it builds `dist/ai-provider-for-mistral.zip`
 - For tagged releases, it derives the version from the tag (for example `v0.1.0` -> `0.1.0`) and validates committed metadata:
   - `readme.txt` `Stable tag` must match the tag version
   - `plugin.php` `Version` must match the tag version
@@ -92,7 +92,7 @@ $result = AiClient::prompt('Hello, world!')
 
 ```php
 use WordPress\AiClient\AiClient;
-use WpAiClientProviderForMistral\Provider\ProviderForMistral;
+use AiProviderForMistral\Provider\ProviderForMistral;
 
 // Register the provider
 $registry = AiClient::defaultRegistry();

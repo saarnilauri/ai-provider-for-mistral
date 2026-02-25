@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WpAiClientProviderForMistral\Tests\Unit\Metadata;
+namespace AiProviderForMistral\Tests\Unit\Metadata;
 
 use PHPUnit\Framework\TestCase;
 use WordPress\AiClient\Messages\Enums\ModalityEnum;
@@ -13,7 +13,7 @@ use WordPress\AiClient\Providers\Models\Enums\CapabilityEnum;
 use WordPress\AiClient\Providers\Models\Enums\OptionEnum;
 
 /**
- * @covers \WpAiClientProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory
+ * @covers \AiProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory
  */
 class ProviderForMistralModelMetadataDirectoryTest extends TestCase
 {
