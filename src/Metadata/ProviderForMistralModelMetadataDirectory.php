@@ -39,6 +39,53 @@ use WordPress\AiClient\Providers\OpenAiCompatibleImplementation\AbstractOpenAiCo
 class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleModelMetadataDirectory
 {
     /**
+     * Model IDs known to support image generation via Mistral's agent tool.
+     *
+     * These are registered as image-generation-only entries in the metadata
+     * directory and are available via the standard provider model factory.
+     * Entries in this list always take precedence over any chat model entry
+     * for the same model ID returned by the Mistral models API.
+     *
+     * @since 0.4.0
+     *
+     * @var array<string, string> Map of model ID to display name.
+     */
+    private const KNOWN_IMAGE_GENERATION_MODELS = [
+        'mistral-medium-2505' => 'Mistral Medium 2505 (Image Generation)',
+    ];
+
+    /**
+     * {@inheritDoc}
+     *
+     * Extends the base implementation to add hardcoded image generation model
+     * entries for models that are not returned as image generation models by
+     * the Mistral models API.
+     *
+     * @since 0.4.0
+     */
+    protected function sendListModelsRequest(): array
+    {
+        $modelsMap = parent::sendListModelsRequest();
+
+        $imageOptions = [
+            new SupportedOption(OptionEnum::inputModalities(), [[ModalityEnum::text()]]),
+            new SupportedOption(OptionEnum::outputModalities(), [[ModalityEnum::image()]]),
+            new SupportedOption(OptionEnum::customOptions()),
+        ];
+
+        foreach (self::KNOWN_IMAGE_GENERATION_MODELS as $modelId => $modelName) {
+            $modelsMap[$modelId] = new ModelMetadata(
+                $modelId,
+                $modelName,
+                [CapabilityEnum::imageGeneration()],
+                $imageOptions
+            );
+        }
+
+        return $modelsMap;
+    }
+
+    /**
      * {@inheritDoc}
      *
      * @since 0.1.0
