@@ -6,7 +6,7 @@
  * Description: Independent WordPress AI Client provider for Mistral.
  * Requires at least: 6.9
  * Requires PHP: 7.4
- * Version: 0.3.1
+ * Version: 0.3.2
  * Author: Lauri Saarni
  * Author URI: https://profiles.wordpress.org/laurisaarni/
  * License: GPL-2.0-or-later
