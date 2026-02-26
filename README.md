@@ -109,9 +109,24 @@ $result = AiClient::prompt('Explain quantum computing')
 echo $result->toText();
 ```
 
+### Image Generation
+
+Mistral supports image generation through its [Agents API](https://docs.mistral.ai/agents/tools/built-in/image_generation). The provider handles the multi-step flow (agent creation, conversation, file download) automatically:
+
+```php
+$result = AiClient::prompt('A red apple on a white background')
+    ->usingProvider('mistral')
+    ->generateImageResult();
+
+// Get the generated image as base64-encoded PNG
+$file = $result->getCandidates()[0]->getMessage()->getParts()[0]->getFile();
+$binaryData = base64_decode($file->getBase64Data(), true);
+file_put_contents('apple.png', $binaryData);
+```
+
 ## Supported Models
 
-Available models are dynamically discovered from the Mistral API. This includes text models and, for compatible models, vision and function-calling capabilities. See the [Mistral documentation](https://docs.mistral.ai/) for the full list of available models.
+Available models are dynamically discovered from the Mistral API. This includes text models and, for compatible models, vision and function-calling capabilities. Image generation is supported through models like `mistral-medium-2505`. See the [Mistral documentation](https://docs.mistral.ai/) for the full list of available models.
 
 ## Configuration
 
