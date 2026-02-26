@@ -49,6 +49,42 @@ class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleText
     /**
      * {@inheritDoc}
      *
+     * Mistral requires a `name` field inside the `json_schema` object. When
+     * the caller provides a raw JSON schema (no `name` key at the top level),
+     * this method wraps it in the expected `{name, schema}` envelope so that
+     * the request is never rejected with a 422.
+     *
+     * @since 0.4.0
+     *
+     * @param array<string, mixed>|null $outputSchema The output schema.
+     * @return array<string, mixed> The prepared response format parameter.
+     */
+    protected function prepareResponseFormatParam(?array $outputSchema): array
+    {
+        if (is_array($outputSchema)) {
+            // If the schema already has a 'name' key it is already in the
+            // full json_schema envelope format ({ name, schema, ... }).
+            if (!isset($outputSchema['name'])) {
+                $outputSchema = [
+                    'name'   => 'response',
+                    'schema' => $outputSchema,
+                ];
+            }
+
+            return [
+                'type'        => 'json_schema',
+                'json_schema' => $outputSchema,
+            ];
+        }
+
+        return [
+            'type' => 'json_object',
+        ];
+    }
+
+    /**
+     * {@inheritDoc}
+     *
      * @since 0.1.0
      */
     protected function createRequest(

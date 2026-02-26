@@ -117,4 +117,43 @@ class StructuredOutputIntegrationTest extends TestCase
         $this->assertStringContainsStringIgnoringCase('paris', $decoded['city']);
         $this->assertStringContainsStringIgnoringCase('france', $decoded['country']);
     }
+
+    /**
+     * Tests that a raw JSON schema (no 'name' key) is accepted without a 422.
+     *
+     * Mistral requires a 'name' field inside the json_schema object. The provider
+     * automatically injects a default name when the caller omits it.
+     */
+    public function testStructuredOutputWithRawJsonSchema(): void
+    {
+        $schema = [
+            'type'       => 'object',
+            'properties' => [
+                'answer' => [
+                    'type'        => 'string',
+                    'description' => 'The answer',
+                ],
+            ],
+            'required'             => ['answer'],
+            'additionalProperties' => false,
+        ];
+
+        $result = AiClient::prompt(
+            'Reply with a JSON object. Set "answer" to the string "42".',
+            $this->registry
+        )
+            ->usingProvider('mistral')
+            ->asJsonResponse($schema)
+            ->generateTextResult();
+
+        $this->assertInstanceOf(GenerativeAiResult::class, $result);
+
+        $text = $result->toText();
+        $this->assertNotEmpty($text);
+
+        $decoded = json_decode($text, true);
+        $this->assertIsArray($decoded, 'Response should be valid JSON. Got: ' . $text);
+        $this->assertArrayHasKey('answer', $decoded);
+        $this->assertIsString($decoded['answer']);
+    }
 }
