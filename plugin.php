@@ -43,6 +43,7 @@ function load_classes(): void
 
     require_once $plugin_dir . '/Metadata/ProviderForMistralModelMetadataDirectory.php';
     require_once $plugin_dir . '/Models/ProviderForMistralTextGenerationModel.php';
+    require_once $plugin_dir . '/Models/ProviderForMistralImageGenerationModel.php';
     require_once $plugin_dir . '/Provider/ProviderForMistral.php';
 }
 
