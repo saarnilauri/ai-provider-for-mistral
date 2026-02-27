@@ -3,7 +3,7 @@ Contributors: laurisaarni
 Tags: ai, mistral, machine-learning, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 0.3.2
+Stable tag: 0.3.3
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -50,7 +50,10 @@ No, this plugin requires the PHP AI Client plugin to be installed and activated.
 
 == Changelog ==
 
-= 0.3.1 =
+= 0.3.3 =
+* Fix image generation model loading when using as a plugin.
+
+= 0.3.2 =
 * Add support for image generation
 * Fix issue in output schema
 
