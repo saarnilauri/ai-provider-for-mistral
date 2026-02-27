@@ -8,3 +8,5 @@
 .shotgun
 
 .env
+
+.DS_Store
