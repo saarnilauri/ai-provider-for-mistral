@@ -6,10 +6,12 @@ namespace AiProviderForMistral\Models;
 
 use AiProviderForMistral\Provider\ProviderForMistral;
 use WordPress\AiClient\Common\Exception\TokenLimitReachedException;
+use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Providers\Http\DTO\Request;
 use WordPress\AiClient\Providers\Http\Enums\HttpMethodEnum;
 use WordPress\AiClient\Providers\OpenAiCompatibleImplementation\AbstractOpenAiCompatibleTextGenerationModel;
 use WordPress\AiClient\Results\DTO\Candidate;
+use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
 
 /**
  * Class for text generation models used by the provider for Mistral.
@@ -80,6 +82,72 @@ class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleText
         return [
             'type' => 'json_object',
         ];
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Adds `tool_choice` set to `"any"` when tools are present to ensure that
+     * Mistral reliably invokes a tool call rather than simulating one in a
+     * plain text response.
+     *
+     * @since 1.0.0
+     *
+     * @param list<Message> $prompt The prompt messages.
+     * @return array<string, mixed> The parameters for the API request.
+     */
+    protected function prepareGenerateTextParams(array $prompt): array
+    {
+        $params = parent::prepareGenerateTextParams($prompt);
+
+        if (isset($params['tools']) && !empty($params['tools'])) {
+            // Do not force tool use when the conversation already contains a
+            // tool response — in that follow-up turn the model should
+            // summarise the function result as text.
+            $hasFunctionResponse = false;
+            foreach ($params['messages'] as $message) {
+                if (isset($message['role']) && 'tool' === $message['role']) {
+                    $hasFunctionResponse = true;
+                    break;
+                }
+            }
+
+            if (!$hasFunctionResponse) {
+                $params['tool_choice'] = 'any';
+            }
+        }
+
+        return $params;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Mistral requires the `parameters` field to always be present on function
+     * declarations. When a {@see FunctionDeclaration} has null parameters, the
+     * base `toArray()` omits the key entirely, which causes a 422 from the
+     * Mistral API. This override ensures an empty object schema is used as a
+     * fallback.
+     *
+     * @since 1.0.0
+     *
+     * @param list<FunctionDeclaration> $functionDeclarations The function declarations.
+     * @return list<array<string, mixed>> The prepared tools parameter.
+     */
+    protected function prepareToolsParam(array $functionDeclarations): array
+    {
+        $tools = parent::prepareToolsParam($functionDeclarations);
+
+        foreach ($tools as &$tool) {
+            if (!isset($tool['function']['parameters'])) {
+                $tool['function']['parameters'] = [
+                    'type'       => 'object',
+                    'properties' => new \stdClass(),
+                ];
+            }
+        }
+
+        return $tools;
     }
 
     /**
