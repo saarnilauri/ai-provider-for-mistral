@@ -3,7 +3,7 @@ Contributors: laurisaarni
 Tags: ai, mistral, machine-learning, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 0.3.3
+Stable tag: 1.0.0
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -49,6 +49,10 @@ Visit the [Mistral Console](https://console.mistral.ai/) to create an account an
 No, this plugin requires the PHP AI Client plugin to be installed and activated. It provides the Mistral-specific implementation that the PHP AI Client uses.
 
 == Changelog ==
+
+= 1.0.0 =
+* Adjust the tool calling to work with Mistral API.
+* Redesign banners and icons
 
 = 0.3.3 =
 * Fix image generation model loading when using as a plugin.
