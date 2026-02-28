@@ -37,6 +37,7 @@ class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleText
     {
         if (isset($choiceData['finish_reason']) && 'length' === $choiceData['finish_reason']) {
             $maxTokens = $this->getConfig()->getMaxTokens();
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw new TokenLimitReachedException(
                 $maxTokens !== null
                     ? sprintf('Generation stopped due to token limit (%d) with finish reason "length".', $maxTokens)

@@ -56,6 +56,7 @@ class ProviderForMistral extends AbstractApiProvider
             }
         }
 
+        // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
         throw new RuntimeException(
             'Unsupported model capabilities: ' . implode(', ', $capabilities)
         );

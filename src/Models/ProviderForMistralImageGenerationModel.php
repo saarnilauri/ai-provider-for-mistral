@@ -178,6 +178,7 @@ class ProviderForMistralImageGenerationModel extends AbstractApiBasedModel imple
         /** @var AgentResponseData|null $agentData */
         $agentData = $agentResponse->getData();
         if (!isset($agentData['id']) || !is_string($agentData['id']) || $agentData['id'] === '') {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw ResponseException::fromMissingData($this->providerMetadata()->getName(), 'agent id');
         }
 
@@ -246,6 +247,7 @@ class ProviderForMistralImageGenerationModel extends AbstractApiBasedModel imple
         $responseData = $response->getData();
 
         if (!isset($responseData['outputs']) || !is_array($responseData['outputs'])) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw ResponseException::fromMissingData($this->providerMetadata()->getName(), 'outputs');
         }
 
@@ -269,6 +271,7 @@ class ProviderForMistralImageGenerationModel extends AbstractApiBasedModel imple
         }
 
         if ($fileIds === []) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw ResponseException::fromMissingData($this->providerMetadata()->getName(), 'file_id');
         }
 
@@ -292,6 +295,7 @@ class ProviderForMistralImageGenerationModel extends AbstractApiBasedModel imple
     {
         $binaryData = $imageResponse->getBody();
         if ($binaryData === null || $binaryData === '') {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw ResponseException::fromInvalidData(
                 $this->providerMetadata()->getName(),
                 'files/' . $fileId . '/content',
