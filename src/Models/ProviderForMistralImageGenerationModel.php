@@ -37,7 +37,9 @@ use WordPress\AiClient\Results\Enums\FinishReasonEnum;
  * @since 0.4.0
  *
  * @phpstan-type ToolFileChunkData array{type: string, file_id?: string, file_name?: string, file_type?: string}
- * @phpstan-type ContentChunkData array{type?: string, text?: string, file_id?: string, file_name?: string, file_type?: string, ...}
+ * @phpstan-type ContentChunkData array{
+ *     type?: string, text?: string, file_id?: string, file_name?: string, file_type?: string, ...
+ * }
  * @phpstan-type OutputData array{type?: string, content?: list<ContentChunkData>, ...}
  * @phpstan-type ConversationResponseData array{conversation_id?: string, outputs?: list<OutputData>}
  * @phpstan-type AgentResponseData array{id?: string}
