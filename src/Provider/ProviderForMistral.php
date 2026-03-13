@@ -7,6 +7,7 @@ namespace AiProviderForMistral\Provider;
 use AiProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory;
 use AiProviderForMistral\Models\ProviderForMistralImageGenerationModel;
 use AiProviderForMistral\Models\ProviderForMistralTextGenerationModel;
+use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Common\Exception\RuntimeException;
 use WordPress\AiClient\Providers\ApiBasedImplementation\AbstractApiProvider;
 use WordPress\AiClient\Providers\ApiBasedImplementation\ListModelsApiBasedProviderAvailability;
@@ -69,13 +70,28 @@ class ProviderForMistral extends AbstractApiProvider
      */
     protected static function createProviderMetadata(): ProviderMetadata
     {
-        return new ProviderMetadata(
+        $providerMetadataArgs = [
             'mistral',
-            'AI Provider for Mistral',
+            'Mistral',
             ProviderTypeEnum::cloud(),
             'https://console.mistral.ai/api-keys',
             RequestAuthenticationMethod::apiKey()
-        );
+        ];
+        // Provider description support was added in 1.2.0.
+        if (version_compare(AiClient::VERSION, '1.2.0', '>=')) {
+            // For WordPress, we should translate the description.
+            if (function_exists('__')) {
+                // phpcs:ignore Generic.Files.LineLength.TooLong
+                $providerMetadataArgs[] = __('Text and image generation with Mistral AI models.', 'ai-provider-for-mistral');
+            } else {
+                $providerMetadataArgs[] = 'Text and image generation with Mistral AI models.';
+            }
+        }
+        // Provider logoPath support was added in 1.3.0.
+        if (version_compare(AiClient::VERSION, '1.3.0', '>=')) {
+            $providerMetadataArgs[] = dirname(__DIR__, 2) . '/assets/images/mistral.svg';
+        }
+        return new ProviderMetadata(...$providerMetadataArgs);
     }
 
     /**
