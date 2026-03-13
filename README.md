@@ -26,6 +26,16 @@ The Composer distribution is intended for library usage and excludes `plugin.php
 3. Ensure the PHP AI Client plugin is installed and activated
 4. Activate the plugin through the WordPress admin
 
+#### Installing with WP-CLI
+
+Use the release ZIP URL from GitHub Releases — **not** the auto-generated `main.zip` source archive, which is missing the bundled dependencies:
+
+```bash
+wp plugin install https://github.com/saarnilauri/ai-provider-for-mistral/releases/download/v1.0.1/ai-provider-for-mistral.zip --activate
+```
+
+Replace `v1.0.1` with the desired release tag.
+
 ## Building the Plugin ZIP
 
 Build a distributable plugin archive locally:
