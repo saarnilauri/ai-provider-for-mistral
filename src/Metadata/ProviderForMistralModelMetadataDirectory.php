@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AiProviderForMistral\Metadata;
+namespace SaarniLauri\AiProviderForMistral\Metadata;
 
-use AiProviderForMistral\Provider\ProviderForMistral;
+use SaarniLauri\AiProviderForMistral\Provider\ProviderForMistral;
 use WordPress\AiClient\Messages\Enums\ModalityEnum;
 use WordPress\AiClient\Providers\Http\DTO\Request;
 use WordPress\AiClient\Providers\Http\DTO\Response;

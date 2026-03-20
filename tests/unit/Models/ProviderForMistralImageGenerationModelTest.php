@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AiProviderForMistral\Tests\Unit\Models;
+namespace SaarniLauri\AiProviderForMistral\Tests\Unit\Models;
 
-use AiProviderForMistral\Models\ProviderForMistralImageGenerationModel;
+use SaarniLauri\AiProviderForMistral\Models\ProviderForMistralImageGenerationModel;
 use PHPUnit\Framework\TestCase;
 use WordPress\AiClient\Common\Exception\InvalidArgumentException;
 use WordPress\AiClient\Files\DTO\File;
@@ -23,7 +23,7 @@ use WordPress\AiClient\Results\DTO\GenerativeAiResult;
 use WordPress\AiClient\Results\Enums\FinishReasonEnum;
 
 /**
- * @covers \AiProviderForMistral\Models\ProviderForMistralImageGenerationModel
+ * @covers \SaarniLauri\AiProviderForMistral\Models\ProviderForMistralImageGenerationModel
  */
 class ProviderForMistralImageGenerationModelTest extends TestCase
 {

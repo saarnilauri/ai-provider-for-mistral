@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace AiProviderForMistral\Tests\Integration\Mistral;
+namespace SaarniLauri\AiProviderForMistral\Tests\Integration\Mistral;
 
-use AiProviderForMistral\Provider\ProviderForMistral;
-use AiProviderForMistral\Tests\Integration\Traits\IntegrationTestTrait;
+use SaarniLauri\AiProviderForMistral\Provider\ProviderForMistral;
+use SaarniLauri\AiProviderForMistral\Tests\Integration\Traits\IntegrationTestTrait;
 use PHPUnit\Framework\TestCase;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Messages\DTO\MessagePart;

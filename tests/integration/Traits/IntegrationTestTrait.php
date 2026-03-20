@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AiProviderForMistral\Tests\Integration\Traits;
+namespace SaarniLauri\AiProviderForMistral\Tests\Integration\Traits;
 
 /**
  * Trait providing shared functionality for integration tests.

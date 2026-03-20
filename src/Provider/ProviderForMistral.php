@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace AiProviderForMistral\Provider;
+namespace SaarniLauri\AiProviderForMistral\Provider;
 
-use AiProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory;
-use AiProviderForMistral\Models\ProviderForMistralImageGenerationModel;
-use AiProviderForMistral\Models\ProviderForMistralTextGenerationModel;
+use SaarniLauri\AiProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory;
+use SaarniLauri\AiProviderForMistral\Models\ProviderForMistralImageGenerationModel;
+use SaarniLauri\AiProviderForMistral\Models\ProviderForMistralTextGenerationModel;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Common\Exception\RuntimeException;
 use WordPress\AiClient\Providers\ApiBasedImplementation\AbstractApiProvider;

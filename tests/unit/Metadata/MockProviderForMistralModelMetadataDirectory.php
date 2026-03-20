@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AiProviderForMistral\Tests\Unit\Metadata;
+namespace SaarniLauri\AiProviderForMistral\Tests\Unit\Metadata;
 
-use AiProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory;
+use SaarniLauri\AiProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory;
 use WordPress\AiClient\Providers\Http\DTO\Response;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
 

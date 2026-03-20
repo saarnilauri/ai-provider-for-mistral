@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AiProviderForMistral\Tests\Unit\Models;
+namespace SaarniLauri\AiProviderForMistral\Tests\Unit\Models;
 
 use PHPUnit\Framework\TestCase;
 use WordPress\AiClient\Messages\DTO\Message;
@@ -20,7 +20,7 @@ use WordPress\AiClient\Results\DTO\GenerativeAiResult;
 use WordPress\AiClient\Results\Enums\FinishReasonEnum;
 
 /**
- * @covers \AiProviderForMistral\Models\ProviderForMistralTextGenerationModel
+ * @covers \SaarniLauri\AiProviderForMistral\Models\ProviderForMistralTextGenerationModel
  */
 class ProviderForMistralTextGenerationModelTest extends TestCase
 {

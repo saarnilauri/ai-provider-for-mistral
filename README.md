@@ -102,7 +102,7 @@ $result = AiClient::prompt('Hello, world!')
 
 ```php
 use WordPress\AiClient\AiClient;
-use AiProviderForMistral\Provider\ProviderForMistral;
+use SaarniLauri\AiProviderForMistral\Provider\ProviderForMistral;
 
 // Register the provider
 $registry = AiClient::defaultRegistry();

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AiProviderForMistral\Models;
+namespace SaarniLauri\AiProviderForMistral\Models;
 
-use AiProviderForMistral\Provider\ProviderForMistral;
+use SaarniLauri\AiProviderForMistral\Provider\ProviderForMistral;
 use WordPress\AiClient\Common\Exception\TokenLimitReachedException;
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Providers\Http\DTO\Request;

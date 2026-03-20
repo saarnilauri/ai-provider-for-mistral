@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AiProviderForMistral\Tests\Unit\Models;
+namespace SaarniLauri\AiProviderForMistral\Tests\Unit\Models;
 
-use AiProviderForMistral\Models\ProviderForMistralTextGenerationModel;
+use SaarniLauri\AiProviderForMistral\Models\ProviderForMistralTextGenerationModel;
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Providers\DTO\ProviderMetadata;
 use WordPress\AiClient\Providers\Http\Contracts\HttpTransporterInterface;
