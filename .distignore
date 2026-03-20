@@ -12,4 +12,7 @@
 /scripts
 /tests
 /vendor
+/.claude
+/.env
+/dist
 RELEASE_NOTES_*.md
