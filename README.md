@@ -146,6 +146,16 @@ The provider uses the `MISTRAL_API_KEY` environment variable for authentication.
 putenv('MISTRAL_API_KEY=your-api-key');
 ```
 
+## External Services
+
+This plugin connects to the [Mistral AI API](https://api.mistral.ai/v1) to provide AI text generation and image generation capabilities.
+
+Data is sent to the Mistral API when your application code makes AI generation requests through the PHP AI Client. The data sent includes your prompts, model configuration, and API key. No data is sent automatically — requests only occur when explicitly triggered by code using the PHP AI Client SDK.
+
+This service is provided by [Mistral AI](https://mistral.ai/):
+- [Terms of Service](https://mistral.ai/terms/)
+- [Privacy Policy](https://mistral.ai/terms/#privacy-policy)
+
 ## License
 
 GPL-2.0-or-later
