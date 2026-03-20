@@ -17,7 +17,7 @@ This project is independent and is not affiliated with, endorsed by, or sponsore
 composer require saarnilauri/ai-provider-for-mistral
 ```
 
-The Composer distribution is intended for library usage and excludes `plugin.php`.
+The Composer distribution is intended for library usage and excludes `ai-provider-for-mistral.php`.
 
 ### As a WordPress Plugin
 
@@ -46,7 +46,7 @@ make dist
 ./scripts/build-plugin-zip.sh
 ```
 
-The ZIP is created at `dist/ai-provider-for-mistral.zip` and includes `plugin.php`.
+The ZIP is created at `dist/ai-provider-for-mistral.zip` and includes `ai-provider-for-mistral.php`.
 
 ## Testing
 
@@ -77,7 +77,7 @@ This repository includes a GitHub Actions workflow at `.github/workflows/release
 - On tag pushes matching `v*`, it builds `dist/ai-provider-for-mistral.zip`
 - For tagged releases, it derives the version from the tag (for example `v0.1.0` -> `0.1.0`) and validates committed metadata:
   - `readme.txt` `Stable tag` must match the tag version
-  - `plugin.php` `Version` must match the tag version
+  - `ai-provider-for-mistral.php` `Version` must match the tag version
 - If versions do not match, the workflow fails
 - It uploads the ZIP as a workflow artifact
 - It attaches the ZIP to the GitHub release for that tag
