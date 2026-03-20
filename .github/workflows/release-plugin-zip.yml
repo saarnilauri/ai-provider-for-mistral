@@ -25,14 +25,14 @@ jobs:
         if: env.RELEASE_VERSION != ''
         run: |
           README_VERSION="$(grep -E '^Stable tag:' readme.txt | head -n1 | sed -E 's/^Stable tag:[[:space:]]*//')"
-          PLUGIN_VERSION="$(grep -E '^ \* Version:' plugin.php | head -n1 | sed -E 's/^ \* Version:[[:space:]]*//')"
+          PLUGIN_VERSION="$(grep -E '^ \* Version:' ai-provider-for-mistral.php | head -n1 | sed -E 's/^ \* Version:[[:space:]]*//')"
 
           echo "Tag version: ${RELEASE_VERSION}"
           echo "readme.txt Stable tag: ${README_VERSION}"
-          echo "plugin.php Version: ${PLUGIN_VERSION}"
+          echo "ai-provider-for-mistral.php Version: ${PLUGIN_VERSION}"
 
           if [ "${README_VERSION}" != "${RELEASE_VERSION}" ] || [ "${PLUGIN_VERSION}" != "${RELEASE_VERSION}" ]; then
-            echo "::error::Version mismatch. Update readme.txt Stable tag and plugin.php Version to ${RELEASE_VERSION} before tagging."
+            echo "::error::Version mismatch. Update readme.txt Stable tag and ai-provider-for-mistral.php Version to ${RELEASE_VERSION} before tagging."
             exit 1
           fi
 

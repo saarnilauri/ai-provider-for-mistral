@@ -6,21 +6,21 @@
  * Description: Independent WordPress AI Client provider for Mistral.
  * Requires at least: 6.9
  * Requires PHP: 7.4
- * Version: 1.0.2
+ * Version: 1.1.0
  * Author: Lauri Saarni
  * Author URI: https://profiles.wordpress.org/laurisaarni/
  * License: GPL-2.0-or-later
  * License URI: https://spdx.org/licenses/GPL-2.0-or-later.html
  * Text Domain: ai-provider-for-mistral
  *
- * @package AiProviderForMistral
+ * @package SaarniLauri\AiProviderForMistral
  */
 
 declare(strict_types=1);
 
-namespace AiProviderForMistral;
+namespace SaarniLauri\AiProviderForMistral;
 
-use AiProviderForMistral\Provider\ProviderForMistral;
+use SaarniLauri\AiProviderForMistral\Provider\ProviderForMistral;
 use WordPress\AiClient\AiClient;
 
 if (!defined('ABSPATH')) {

@@ -1,5 +1,5 @@
 # Exclude WordPress plugin bootstrap from Composer archive
-plugin.php export-ignore
+ai-provider-for-mistral.php export-ignore
 
 # Exclude development and CI files from Composer archive
 /.github export-ignore
