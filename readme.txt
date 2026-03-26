@@ -1,6 +1,6 @@
 === AI Provider for Mistral ===
 Contributors: laurisaarni
-Tags: ai, mistral, machine-learning, artificial-intelligence
+Tags: ai, mistral, machine-learning, artificial-intelligence, connector
 Requires at least: 6.9
 Tested up to: 6.9
 Stable tag: 1.1.0
