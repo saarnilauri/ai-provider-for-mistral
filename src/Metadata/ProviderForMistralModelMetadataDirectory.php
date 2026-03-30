@@ -70,6 +70,7 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
         $imageOptions = [
             new SupportedOption(OptionEnum::inputModalities(), [[ModalityEnum::text()]]),
             new SupportedOption(OptionEnum::outputModalities(), [[ModalityEnum::image()]]),
+            new SupportedOption(OptionEnum::outputFileType()),
             new SupportedOption(OptionEnum::customOptions()),
         ];
 
