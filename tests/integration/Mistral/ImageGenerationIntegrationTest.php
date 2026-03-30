@@ -8,6 +8,10 @@ use SaarniLauri\AiProviderForMistral\Provider\ProviderForMistral;
 use SaarniLauri\AiProviderForMistral\Tests\Integration\Traits\IntegrationTestTrait;
 use PHPUnit\Framework\TestCase;
 use WordPress\AiClient\AiClient;
+use WordPress\AiClient\Files\Enums\FileTypeEnum;
+use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
+use WordPress\AiClient\Providers\Models\DTO\ModelRequirements;
+use WordPress\AiClient\Providers\Models\Enums\CapabilityEnum;
 use WordPress\AiClient\Providers\ProviderRegistry;
 use WordPress\AiClient\Results\DTO\GenerativeAiResult;
 
@@ -91,5 +95,76 @@ class ImageGenerationIntegrationTest extends TestCase
 
         // Verify the conversation ID is returned as the result ID.
         $this->assertNotEmpty($result->getId(), 'Expected a non-empty conversation ID.');
+    }
+
+    /**
+     * Tests that the Mistral model metadata directory exposes at least one model with image
+     * generation capability, including the known image generation model.
+     */
+    public function testMistralProviderExposesImageGenerationModelInMetadata(): void
+    {
+        $imageRequirements = new ModelRequirements(
+            [CapabilityEnum::imageGeneration()],
+            []
+        );
+
+        $matchingModels = $this->registry->findProviderModelsMetadataForSupport(
+            'mistral',
+            $imageRequirements
+        );
+
+        $this->assertNotEmpty(
+            $matchingModels,
+            'Expected Mistral to expose at least one model with imageGeneration capability.'
+        );
+
+        $modelIds = array_map(
+            static fn(ModelMetadata $m): string => $m->getId(),
+            $matchingModels
+        );
+
+        $this->assertContains(
+            'mistral-medium-2505',
+            $modelIds,
+            'Expected mistral-medium-2505 to be listed with imageGeneration capability.'
+        );
+    }
+
+    /**
+     * Tests image generation when an output file type is requested and the preferred providers
+     * are not available, requiring Mistral to be selected as the fallback.
+     *
+     * The generated PNG is saved to tests/integration/images/ so a local
+     * tester can inspect the result visually.
+     */
+    public function testImageGenerationFallsBackToMistralWhenPreferredProvidersUnavailable(): void
+    {
+        $result = AiClient::prompt('A red apple on a white background.', $this->registry)
+            ->asOutputFileType(FileTypeEnum::inline())
+            ->usingModelPreference(
+                ['google', 'gemini-3.1-flash-image-preview'],
+                ['google', 'imagen-4.0-generate-001'],
+                ['openai', 'gpt-image-1'],
+                ['openai', 'dall-e-3']
+            )
+            ->generateImageResult();
+
+        $this->assertInstanceOf(GenerativeAiResult::class, $result);
+
+        $candidates = $result->getCandidates();
+        $this->assertNotEmpty($candidates, 'Expected at least one image candidate.');
+
+        $file = $candidates[0]->getMessage()->getParts()[0]->getFile();
+        $this->assertNotNull($file, 'Expected a file in the first message part.');
+        $this->assertNotEmpty($file->getBase64Data(), 'Expected non-empty base64 image data.');
+
+        $this->assertSame('mistral', $result->getProviderMetadata()->getId());
+
+        $binaryData = base64_decode($file->getBase64Data(), true);
+        $this->assertNotFalse($binaryData, 'Expected valid base64-encoded image data.');
+
+        $outputPath = $this->imagesDir . '/test_image_generation_fallback.png';
+        file_put_contents($outputPath, $binaryData);
+        $this->assertFileExists($outputPath);
     }
 }
