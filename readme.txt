@@ -1,6 +1,6 @@
 === AI Provider for Mistral ===
 Contributors: laurisaarni
-Tags: ai, mistral, machine-learning, artificial-intelligence, connector
+Tags: ai, mistral, machine-learning, artificial-intelligence, connector, connector-api
 Requires at least: 6.9
 Tested up to: 6.9
 Stable tag: 1.1.0
@@ -49,6 +49,9 @@ Visit the [Mistral Console](https://console.mistral.ai/) to create an account an
 No, this plugin requires the PHP AI Client plugin to be installed and activated. It provides the Mistral-specific implementation that the PHP AI Client uses.
 
 == Changelog ==
+
+= 1.1.0 =
+* Refactor to follow wp.org plugin guidelines
 
 = 1.0.2 =
 * Add provider description and logo for connector screen
