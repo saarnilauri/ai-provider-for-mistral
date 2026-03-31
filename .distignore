@@ -2,6 +2,7 @@
 /.gitattributes
 /.gitignore
 /.distignore
+/.wordpress-org
 /composer.json
 /composer.lock
 /Makefile

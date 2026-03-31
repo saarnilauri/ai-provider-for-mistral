@@ -6,6 +6,7 @@ ai-provider-for-mistral.php export-ignore
 /.gitattributes export-ignore
 /.gitignore export-ignore
 /.distignore export-ignore
+/.wordpress-org export-ignore
 /phpcs.xml.dist export-ignore
 /phpstan.neon.dist export-ignore
 /phpunit.xml.dist export-ignore
