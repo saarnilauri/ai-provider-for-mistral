@@ -205,7 +205,37 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
             )
         );
 
-        usort($models, [$this, 'modelSortCallback']);
+        $sortCallback = [$this, 'modelSortCallback'];
+
+        if (function_exists('apply_filters')) {
+            /**
+             * Filters the comparator used to sort Mistral model metadata.
+             *
+             * Integrators can return any callable with the `usort()` comparator
+             * signature `function (ModelMetadata $a, ModelMetadata $b): int`.
+             * The default comparator, the directory instance, and the unsorted
+             * model list are provided as context so the filter can delegate to
+             * the default when only a partial override is desired.
+             *
+             * @since 1.2.0
+             *
+             * @param callable                                 $sortCallback Default comparator.
+             * @param ProviderForMistralModelMetadataDirectory $directory    Directory instance.
+             * @param list<ModelMetadata>                      $models       Unsorted model list.
+             */
+            $sortCallback = apply_filters(
+                'ai_provider_for_mistral_model_sort_callback',
+                $sortCallback,
+                $this,
+                $models
+            );
+        }
+
+        if (!is_callable($sortCallback)) {
+            $sortCallback = [$this, 'modelSortCallback'];
+        }
+
+        usort($models, $sortCallback);
 
         return $models;
     }

@@ -48,6 +48,29 @@ Visit the [Mistral Console](https://console.mistral.ai/) to create an account an
 
 No, this plugin requires the PHP AI Client plugin to be installed and activated. It provides the Mistral-specific implementation that the PHP AI Client uses.
 
+== For Developers ==
+
+= Filters =
+
+**`ai_provider_for_mistral_model_sort_callback`**
+
+Filters the comparator used to order Mistral models in the metadata directory. Return any callable with the `usort()` signature `function (ModelMetadata $a, ModelMetadata $b): int`. The default comparator, the directory instance, and the unsorted model list are passed as context, so your filter can delegate to the default for everything except the cases you want to override.
+
+Example — pin `codestral-latest` to the top and fall back to the default order for everything else:
+
+`
+add_filter(
+    'ai_provider_for_mistral_model_sort_callback',
+    function ( callable $default ): callable {
+        return function ( $a, $b ) use ( $default ) {
+            if ( $a->getId() === 'codestral-latest' ) return -1;
+            if ( $b->getId() === 'codestral-latest' ) return 1;
+            return $default( $a, $b );
+        };
+    }
+);
+`
+
 == Changelog ==
 
 = 1.1.1 =
