@@ -149,6 +149,10 @@ class FunctionCallingIntegrationTest extends TestCase
             ['temperature' => 22, 'condition' => 'sunny']
         );
 
+        // This test makes two back-to-back chat completion calls; pace the second
+        // one to stay under the provider's per-second rate limit.
+        $this->throttle();
+
         $result2 = AiClient::prompt(null, $this->registry)
             ->usingProvider('mistral')
             ->withHistory($userMessage, $assistantMessage)
