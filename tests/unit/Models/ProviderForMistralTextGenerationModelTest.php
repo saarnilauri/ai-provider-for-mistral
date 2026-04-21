@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace SaarniLauri\AiProviderForMistral\Tests\Unit\Models;
 
 use PHPUnit\Framework\TestCase;
+use WordPress\AiClient\Common\Exception\InvalidArgumentException;
+use WordPress\AiClient\Common\Exception\TokenLimitReachedException;
+use WordPress\AiClient\Files\DTO\File;
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Messages\DTO\MessagePart;
 use WordPress\AiClient\Messages\Enums\MessageRoleEnum;
@@ -12,7 +15,6 @@ use WordPress\AiClient\Providers\DTO\ProviderMetadata;
 use WordPress\AiClient\Providers\Http\Contracts\HttpTransporterInterface;
 use WordPress\AiClient\Providers\Http\Contracts\RequestAuthenticationInterface;
 use WordPress\AiClient\Providers\Http\DTO\Response;
-use WordPress\AiClient\Common\Exception\TokenLimitReachedException;
 use WordPress\AiClient\Providers\Http\Exception\ClientException;
 use WordPress\AiClient\Providers\Models\DTO\ModelConfig;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
@@ -240,6 +242,44 @@ class ProviderForMistralTextGenerationModelTest extends TestCase
         $this->assertInstanceOf(TokenLimitReachedException::class, $exception);
         $this->assertNull($exception->getMaxTokens());
         $this->assertStringContainsString('"length"', $exception->getMessage());
+    }
+
+    /**
+     * Tests that remote document files are serialized as Mistral's document_url content chunk.
+     */
+    public function testDocumentPartSerializationEmitsDocumentUrl(): void
+    {
+        $model = $this->createModel();
+        $file = new File('https://example.com/report.pdf', 'application/pdf');
+        $part = new MessagePart($file);
+
+        $data = $model->exposeGetMessagePartContentData($part);
+
+        $this->assertSame(
+            [
+                'type'         => 'document_url',
+                'document_url' => 'https://example.com/report.pdf',
+            ],
+            $data
+        );
+    }
+
+    /**
+     * Tests that inline (non-remote) document files throw a clear error.
+     */
+    public function testInlineDocumentPartThrows(): void
+    {
+        $model = $this->createModel();
+        $file = new File(
+            'data:application/pdf;base64,' . base64_encode('%PDF-1.4 fake'),
+            'application/pdf'
+        );
+        $part = new MessagePart($file);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Mistral chat requires document files to be provided as a URL.');
+
+        $model->exposeGetMessagePartContentData($part);
     }
 
     /**

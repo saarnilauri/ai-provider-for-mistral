@@ -6,6 +6,7 @@ namespace SaarniLauri\AiProviderForMistral\Tests\Unit\Models;
 
 use SaarniLauri\AiProviderForMistral\Models\ProviderForMistralTextGenerationModel;
 use WordPress\AiClient\Messages\DTO\Message;
+use WordPress\AiClient\Messages\DTO\MessagePart;
 use WordPress\AiClient\Providers\DTO\ProviderMetadata;
 use WordPress\AiClient\Providers\Http\Contracts\HttpTransporterInterface;
 use WordPress\AiClient\Providers\Http\Contracts\RequestAuthenticationInterface;
@@ -45,5 +46,16 @@ class MockProviderForMistralTextGenerationModel extends ProviderForMistralTextGe
     public function exposePrepareGenerateTextParams(array $prompt): array
     {
         return $this->prepareGenerateTextParams($prompt);
+    }
+
+    /**
+     * Exposes getMessagePartContentData for testing.
+     *
+     * @param MessagePart $part
+     * @return array<string, mixed>|null
+     */
+    public function exposeGetMessagePartContentData(MessagePart $part): ?array
+    {
+        return $this->getMessagePartContentData($part);
     }
 }
