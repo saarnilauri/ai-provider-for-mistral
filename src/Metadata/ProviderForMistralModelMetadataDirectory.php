@@ -59,7 +59,9 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
      *
      * Extends the base implementation to add hardcoded image generation model
      * entries for models that are not returned as image generation models by
-     * the Mistral models API.
+     * the Mistral models API. Re-sorts the resulting map after the merge so
+     * overridden entries (whose capability signature has changed from chat to
+     * image-gen) land in the correct position relative to their peers.
      *
      * @since 0.4.0
      */
@@ -83,7 +85,18 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
             );
         }
 
-        return $modelsMap;
+        // Re-sort after the override: replacing an API entry with an image-generation
+        // entry changes its capability signature, which usually changes where it should
+        // sit in the sorted list.
+        $modelsList = array_values($modelsMap);
+        usort($modelsList, [$this, 'modelSortCallback']);
+
+        $resortedMap = [];
+        foreach ($modelsList as $model) {
+            $resortedMap[$model->getId()] = $model;
+        }
+
+        return $resortedMap;
     }
 
     /**
@@ -198,7 +211,11 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
     }
 
     /**
-     * Callback function for sorting models by ID, to be used with `usort()`.
+     * Callback function for sorting models, to be used with `usort()`.
+     *
+     * The objective is not to be opinionated about which models are better, but to surface commonly used, more recent,
+     * and flagship models first. Models without chat support (embeddings, moderation) and legacy open-weights models
+     * are pushed to the bottom.
      *
      * @param ModelMetadata $a First model.
      * @param ModelMetadata $b Second model.
@@ -211,15 +228,132 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
         $aId = $a->getId();
         $bId = $b->getId();
 
-        // Prefer latest models over dated variants.
-        if (str_contains($aId, '-latest') && !str_contains($bId, '-latest')) {
+        // 1. Chat-capable models before non-chat (embeddings, moderation).
+        $aHasChat = !empty($a->getSupportedCapabilities());
+        $bHasChat = !empty($b->getSupportedCapabilities());
+        if ($aHasChat && !$bHasChat) {
             return -1;
         }
-        if (str_contains($bId, '-latest') && !str_contains($aId, '-latest')) {
+        if ($bHasChat && !$aHasChat) {
             return 1;
         }
 
-        // Fallback: Sort alphabetically.
-        return strcmp($a->getId(), $b->getId());
+        // 2. Legacy open-weights models sink.
+        $aIsLegacy = $this->isLegacyOpenWeight($aId);
+        $bIsLegacy = $this->isLegacyOpenWeight($bId);
+        if ($aIsLegacy && !$bIsLegacy) {
+            return 1;
+        }
+        if ($bIsLegacy && !$aIsLegacy) {
+            return -1;
+        }
+
+        // 3. Family rank (lower = surfaced earlier).
+        $aRank = $this->modelFamilyRank($aId);
+        $bRank = $this->modelFamilyRank($bId);
+        if ($aRank !== $bRank) {
+            return $aRank <=> $bRank;
+        }
+
+        // 4. Within the same family, prefer the `-latest` alias.
+        $aIsLatest = str_contains($aId, '-latest');
+        $bIsLatest = str_contains($bId, '-latest');
+        if ($aIsLatest && !$bIsLatest) {
+            return -1;
+        }
+        if ($bIsLatest && !$aIsLatest) {
+            return 1;
+        }
+
+        // 5. Newer dated variants before older ones.
+        $aDate = $this->modelDateStamp($aId);
+        $bDate = $this->modelDateStamp($bId);
+        if ($aDate !== $bDate) {
+            return $bDate <=> $aDate;
+        }
+
+        // 6. Fallback: deterministic alphabetical.
+        return strcmp($aId, $bId);
+    }
+
+    /**
+     * Returns a family rank for a model id; lower ranks surface earlier.
+     *
+     * @since 1.2.0
+     *
+     * @param string $id Model id.
+     * @return int Rank integer; 200 for unknown families.
+     */
+    private function modelFamilyRank(string $id): int
+    {
+        if (str_starts_with($id, 'mistral-large')) {
+            return 10;
+        }
+        if (str_starts_with($id, 'mistral-medium')) {
+            return 20;
+        }
+        if (str_starts_with($id, 'magistral-')) {
+            return 30;
+        }
+        if (str_starts_with($id, 'codestral-') || str_starts_with($id, 'devstral-')) {
+            // Embedding variants of Codestral are handled by the embed rank below.
+            if (str_contains($id, 'embed')) {
+                return 110;
+            }
+            return 40;
+        }
+        if (str_starts_with($id, 'pixtral-')) {
+            return 50;
+        }
+        if (str_starts_with($id, 'mistral-small')) {
+            return 60;
+        }
+        if (str_starts_with($id, 'ministral-')) {
+            return 70;
+        }
+        if (str_starts_with($id, 'voxtral-')) {
+            return 80;
+        }
+        if (str_starts_with($id, 'mistral-ocr') || str_starts_with($id, 'mistral-saba')) {
+            return 90;
+        }
+        if (str_starts_with($id, 'mistral-moderation')) {
+            return 100;
+        }
+        if ($id === 'mistral-embed' || str_ends_with($id, '-embed')) {
+            return 110;
+        }
+
+        return 200;
+    }
+
+    /**
+     * Extracts a YYMM date stamp from a model id suffix, if present.
+     *
+     * @since 1.2.0
+     *
+     * @param string $id Model id.
+     * @return int YYMM integer, or 0 if no trailing 4-digit stamp is found.
+     */
+    private function modelDateStamp(string $id): int
+    {
+        if (preg_match('/-(\d{4})$/', $id, $matches)) {
+            return (int) $matches[1];
+        }
+
+        return 0;
+    }
+
+    /**
+     * Returns true for ids that represent legacy open-weights models.
+     *
+     * @since 1.2.0
+     *
+     * @param string $id Model id.
+     * @return bool Whether the model is a legacy open-weights release.
+     */
+    private function isLegacyOpenWeight(string $id): bool
+    {
+        return str_starts_with($id, 'open-') || str_starts_with($id, 'mathstral');
     }
 }
