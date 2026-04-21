@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace SaarniLauri\AiProviderForMistral\Models;
 
 use SaarniLauri\AiProviderForMistral\Provider\ProviderForMistral;
+use WordPress\AiClient\Common\Exception\InvalidArgumentException;
 use WordPress\AiClient\Common\Exception\TokenLimitReachedException;
 use WordPress\AiClient\Messages\DTO\Message;
+use WordPress\AiClient\Messages\DTO\MessagePart;
 use WordPress\AiClient\Providers\Http\DTO\Request;
 use WordPress\AiClient\Providers\Http\Enums\HttpMethodEnum;
 use WordPress\AiClient\Providers\OpenAiCompatibleImplementation\AbstractOpenAiCompatibleTextGenerationModel;
@@ -149,6 +151,47 @@ class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleText
         }
 
         return $tools;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Extends the base implementation so that document files (PDFs and similar)
+     * are serialized into Mistral's `{type: "document_url", document_url: "..."}`
+     * content chunk. The Mistral chat endpoint accepts documents by URL only —
+     * inline base64 document content is not supported, so callers must upload
+     * via the Files API and pass the resulting signed URL.
+     *
+     * Images and audio continue to use the parent's OpenAI-compatible
+     * serialization, which is accepted by Mistral's OpenAI-compatible layer.
+     *
+     * @since 1.2.0
+     *
+     * @param MessagePart $part The message part to get the data for.
+     * @return array<string, mixed>|null The data for the message content part, or null if not applicable.
+     * @throws InvalidArgumentException If a non-remote document is provided.
+     */
+    protected function getMessagePartContentData(MessagePart $part): ?array
+    {
+        if ($part->getType()->isFile()) {
+            $file = $part->getFile();
+            if ($file !== null && $file->isDocument()) {
+                if (!$file->isRemote()) {
+                    // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+                    throw new InvalidArgumentException(
+                        'Mistral chat requires document files to be provided as a URL. '
+                        . 'Upload via the Files API and use the returned signed URL.'
+                    );
+                }
+
+                return [
+                    'type'         => 'document_url',
+                    'document_url' => $file->getUrl(),
+                ];
+            }
+        }
+
+        return parent::getMessagePartContentData($part);
     }
 
     /**

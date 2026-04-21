@@ -150,7 +150,13 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
         ];
 
         $textOnlyOptions = array_merge($baseOptions, [
-            new SupportedOption(OptionEnum::inputModalities(), [[ModalityEnum::text()]]),
+            new SupportedOption(
+                OptionEnum::inputModalities(),
+                [
+                    [ModalityEnum::text()],
+                    [ModalityEnum::text(), ModalityEnum::document()],
+                ]
+            ),
             new SupportedOption(OptionEnum::outputModalities(), [[ModalityEnum::text()]]),
         ]);
 
@@ -160,6 +166,20 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
                 [
                     [ModalityEnum::text()],
                     [ModalityEnum::text(), ModalityEnum::image()],
+                    [ModalityEnum::text(), ModalityEnum::document()],
+                    [ModalityEnum::text(), ModalityEnum::image(), ModalityEnum::document()],
+                ]
+            ),
+            new SupportedOption(OptionEnum::outputModalities(), [[ModalityEnum::text()]]),
+        ]);
+
+        $audioOptions = array_merge($baseOptions, [
+            new SupportedOption(
+                OptionEnum::inputModalities(),
+                [
+                    [ModalityEnum::text()],
+                    [ModalityEnum::text(), ModalityEnum::audio()],
+                    [ModalityEnum::text(), ModalityEnum::document()],
                 ]
             ),
             new SupportedOption(OptionEnum::outputModalities(), [[ModalityEnum::text()]]),
@@ -168,7 +188,11 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
         /** @var list<ModelData> $modelsData */
         $models = array_values(
             array_map(
-                static function (array $modelData) use ($textOnlyOptions, $visionOptions): ModelMetadata {
+                static function (array $modelData) use (
+                    $textOnlyOptions,
+                    $visionOptions,
+                    $audioOptions
+                ): ModelMetadata {
                     $modelId = $modelData['id'];
                     $modelName = $modelData['name'] ?? $modelId;
 
@@ -176,6 +200,10 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
                     $supportsChat = $capabilityData['completion_chat'] ?? false;
                     $supportsFunctionCalling = $capabilityData['function_calling'] ?? false;
                     $supportsVision = $capabilityData['vision'] ?? false;
+                    // Mistral's /v1/models response does not expose an audio-input flag, so Voxtral chat models
+                    // are detected by id prefix. Voxtral is the only family that accepts `input_audio` chunks
+                    // on /v1/chat/completions today.
+                    $supportsAudioInput = str_starts_with($modelId, 'voxtral-');
 
                     if (!$supportsChat) {
                         return new ModelMetadata($modelId, $modelName, [], []);
@@ -186,7 +214,13 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
                         CapabilityEnum::chatHistory(),
                     ];
 
-                    $options = $supportsVision ? $visionOptions : $textOnlyOptions;
+                    if ($supportsAudioInput) {
+                        $options = $audioOptions;
+                    } elseif ($supportsVision) {
+                        $options = $visionOptions;
+                    } else {
+                        $options = $textOnlyOptions;
+                    }
 
                     if ($supportsFunctionCalling) {
                         $options = array_merge($options, [
