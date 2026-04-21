@@ -2,8 +2,8 @@
 Contributors: laurisaarni
 Tags: ai, mistral, artificial-intelligence, connector
 Requires at least: 6.9
-Tested up to: 6.9
-Stable tag: 1.1.1
+Tested up to: 7.0
+Stable tag: 1.2.0
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -72,6 +72,12 @@ add_filter(
 `
 
 == Changelog ==
+
+= 1.2.0 =
+* Default sort now surfaces flagship Mistral models (Large, Medium, Magistral, Codestral, …) first and sinks legacy open-weights and non-chat models to the bottom.
+* New `ai_provider_for_mistral_model_sort_callback` filter lets integrators replace the sort comparator.
+* Declare document input modality on all chat models and serialize `{type: "document_url"}` content chunks — document QnA now works through any chat model via a remote URL (upload via the Files API for private documents).
+* Declare audio input modality on Voxtral models so the AI Client surfaces them as audio-capable chat models.
 
 = 1.1.1 =
 * Fix an issue with the image generation model
