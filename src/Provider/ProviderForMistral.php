@@ -6,6 +6,7 @@ namespace SaarniLauri\AiProviderForMistral\Provider;
 
 use SaarniLauri\AiProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory;
 use SaarniLauri\AiProviderForMistral\Models\ProviderForMistralImageGenerationModel;
+use SaarniLauri\AiProviderForMistral\Models\ProviderForMistralTextExtractionModel;
 use SaarniLauri\AiProviderForMistral\Models\ProviderForMistralTextGenerationModel;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Common\Exception\RuntimeException;
@@ -46,6 +47,11 @@ class ProviderForMistral extends AbstractApiProvider
         ProviderMetadata $providerMetadata
     ): ModelInterface {
         $capabilities = $modelMetadata->getSupportedCapabilities();
+        foreach ($capabilities as $capability) {
+            if ($capability->isTextExtraction()) {
+                return new ProviderForMistralTextExtractionModel($modelMetadata, $providerMetadata);
+            }
+        }
         foreach ($capabilities as $capability) {
             if ($capability->isImageGeneration()) {
                 return new ProviderForMistralImageGenerationModel($modelMetadata, $providerMetadata);

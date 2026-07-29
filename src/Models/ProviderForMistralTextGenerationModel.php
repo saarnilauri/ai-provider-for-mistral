@@ -108,8 +108,9 @@ class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleText
             // tool response — in that follow-up turn the model should
             // summarise the function result as text.
             $hasFunctionResponse = false;
-            foreach ($params['messages'] as $message) {
-                if (isset($message['role']) && 'tool' === $message['role']) {
+            $messages = is_array($params['messages'] ?? null) ? $params['messages'] : [];
+            foreach ($messages as $message) {
+                if (is_array($message) && isset($message['role']) && 'tool' === $message['role']) {
                     $hasFunctionResponse = true;
                     break;
                 }
@@ -142,6 +143,9 @@ class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleText
         $tools = parent::prepareToolsParam($functionDeclarations);
 
         foreach ($tools as &$tool) {
+            if (!isset($tool['function']) || !is_array($tool['function'])) {
+                continue;
+            }
             if (!isset($tool['function']['parameters'])) {
                 $tool['function']['parameters'] = [
                     'type'       => 'object',

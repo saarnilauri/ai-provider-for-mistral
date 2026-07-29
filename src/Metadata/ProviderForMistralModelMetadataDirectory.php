@@ -196,6 +196,27 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
                     $modelId = $modelData['id'];
                     $modelName = $modelData['name'] ?? $modelId;
 
+                    // OCR models are not chat models; they are served by the dedicated
+                    // /v1/ocr endpoint and detected by id prefix (the models API reports
+                    // no OCR-specific capability flag).
+                    if (str_starts_with($modelId, 'mistral-ocr')) {
+                        return new ModelMetadata(
+                            $modelId,
+                            $modelName,
+                            [CapabilityEnum::textExtraction()],
+                            [
+                                new SupportedOption(
+                                    OptionEnum::inputModalities(),
+                                    [
+                                        [ModalityEnum::document()],
+                                        [ModalityEnum::image()],
+                                    ]
+                                ),
+                                new SupportedOption(OptionEnum::customOptions()),
+                            ]
+                        );
+                    }
+
                     $capabilityData = $modelData['capabilities'] ?? [];
                     $supportsChat = $capabilityData['completion_chat'] ?? false;
                     $supportsFunctionCalling = $capabilityData['function_calling'] ?? false;

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b0f42ad7a2762ce3aada800e503ae7b4",
+    "content-hash": "ff7d51488b321fe6e38bddd3bbc739ae",
     "packages": [],
     "packages-dev": [
         {
@@ -3717,17 +3717,11 @@
         },
         {
             "name": "wordpress/php-ai-client",
-            "version": "1.3.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/WordPress/php-ai-client.git",
-                "reference": "631704201d15ffeff7091ad3bc7156db74054956"
-            },
+            "version": "dev-feature/text-extraction-poc",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/WordPress/php-ai-client/zipball/631704201d15ffeff7091ad3bc7156db74054956",
-                "reference": "631704201d15ffeff7091ad3bc7156db74054956",
-                "shasum": ""
+                "type": "path",
+                "url": "../php-ai-client",
+                "reference": "a31b0ec6d4676d4a464055fef72173e2d8995214"
             },
             "require": {
                 "ext-json": "*",
@@ -3763,14 +3757,45 @@
             },
             "type": "library",
             "autoload": {
-                "files": [
-                    "src/polyfills.php"
-                ],
                 "psr-4": {
                     "WordPress\\AiClient\\": "src/"
+                },
+                "files": [
+                    "src/polyfills.php"
+                ]
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "WordPress\\AiClient\\Tests\\": "tests/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "scripts": {
+                "lint": [
+                    "@phpcs",
+                    "@phpstan"
+                ],
+                "phpcbf": [
+                    "phpcbf"
+                ],
+                "phpcs": [
+                    "phpcs"
+                ],
+                "phpstan": [
+                    "phpstan analyze --memory-limit=256M"
+                ],
+                "phpunit": [
+                    "phpunit"
+                ],
+                "test": [
+                    "@test:unit"
+                ],
+                "test:unit": [
+                    "phpunit --testsuite unit"
+                ],
+                "test:integration": [
+                    "phpunit --configuration phpunit-integration.xml.dist"
+                ]
+            },
             "license": [
                 "GPL-2.0-or-later"
             ],
@@ -3791,13 +3816,17 @@
                 "issues": "https://github.com/WordPress/php-ai-client/issues",
                 "source": "https://github.com/WordPress/php-ai-client"
             },
-            "time": "2026-03-18T15:46:43+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         }
     ],
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "phpcompatibility/php-compatibility": 20
+        "phpcompatibility/php-compatibility": 20,
+        "wordpress/php-ai-client": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

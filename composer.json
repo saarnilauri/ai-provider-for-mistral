@@ -35,11 +35,20 @@
         "slevomat/coding-standard": "^8.20",
         "squizlabs/php_codesniffer": "^3.7 || ^4.0",
         "symfony/dotenv": "^5.4",
-        "wordpress/php-ai-client": "^1.3.1"
+        "wordpress/php-ai-client": "dev-feature/text-extraction-poc"
     },
     "suggest": {
         "wordpress/php-ai-client": "Required. The core PHP AI Client SDK that this provider extends."
     },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../php-ai-client",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
     "minimum-stability": "dev",
     "prefer-stable": true,
     "autoload": {
