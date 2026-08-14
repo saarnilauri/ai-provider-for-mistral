@@ -16,10 +16,14 @@ use WordPress\AiClient\Providers\Http\Contracts\HttpTransporterInterface;
 use WordPress\AiClient\Providers\Http\Contracts\RequestAuthenticationInterface;
 use WordPress\AiClient\Providers\Http\DTO\Response;
 use WordPress\AiClient\Providers\Http\Exception\ClientException;
+use WordPress\AiClient\Providers\Http\Exception\ServerException;
 use WordPress\AiClient\Providers\Models\DTO\ModelConfig;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
 use WordPress\AiClient\Results\DTO\GenerativeAiResult;
 use WordPress\AiClient\Results\Enums\FinishReasonEnum;
+use WordPress\AiClient\Tools\DTO\FunctionCall;
+use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
+use WordPress\AiClient\Tools\DTO\FunctionResponse;
 
 /**
  * @covers \SaarniLauri\AiProviderForMistral\Models\ProviderForMistralTextGenerationModel
@@ -280,6 +284,162 @@ class ProviderForMistralTextGenerationModelTest extends TestCase
         $this->expectExceptionMessage('Mistral chat requires document files to be provided as a URL.');
 
         $model->exposeGetMessagePartContentData($part);
+    }
+
+    /**
+     * Tests that generateTextResult() throws TokenLimitReachedException when finish_reason
+     * is "model_length", which Mistral uses for its own context limit.
+     */
+    public function testGenerateTextResultThrowsOnModelLengthFinishReason(): void
+    {
+        $model = $this->createModelForFinishReason('model_length');
+
+        $exception = null;
+        try {
+            $model->generateTextResult([new Message(MessageRoleEnum::user(), [new MessagePart('Hello')])]);
+        } catch (TokenLimitReachedException $e) {
+            $exception = $e;
+        }
+
+        $this->assertInstanceOf(TokenLimitReachedException::class, $exception);
+        $this->assertNull($exception->getMaxTokens());
+        $this->assertStringContainsString('"model_length"', $exception->getMessage());
+    }
+
+    /**
+     * Tests that generateTextResult() reports a finish_reason of "error" as an upstream
+     * failure rather than letting it reach the base class as an unreadable response.
+     */
+    public function testGenerateTextResultThrowsServerExceptionOnErrorFinishReason(): void
+    {
+        $model = $this->createModelForFinishReason('error');
+
+        $this->expectException(ServerException::class);
+        $this->expectExceptionMessage('Mistral stopped generating with finish reason "error" for choice 0');
+
+        $model->generateTextResult([new Message(MessageRoleEnum::user(), [new MessagePart('Hello')])]);
+    }
+
+    /**
+     * Tests that tool use is forced on the opening turn, so that the model calls a tool
+     * instead of describing a call in prose.
+     */
+    public function testToolChoiceIsForcedOnTheOpeningTurn(): void
+    {
+        $model = $this->createModel($this->configWithTools());
+        $params = $model->exposePrepareGenerateTextParams(
+            [new Message(MessageRoleEnum::user(), [new MessagePart('What is the weather in Helsinki?')])]
+        );
+
+        $this->assertSame('any', $params['tool_choice'] ?? null);
+    }
+
+    /**
+     * Tests that tool use is not forced once the model has taken a turn of its own.
+     *
+     * Without this the model can never answer: "any" obliges it to call something on
+     * every request, so a conversation that replays previous turns as text - as an agent
+     * loop that stores its transcript does - calls tools until the caller gives up.
+     */
+    public function testToolChoiceIsNotForcedAfterAnAssistantTurn(): void
+    {
+        $model = $this->createModel($this->configWithTools());
+        $params = $model->exposePrepareGenerateTextParams([
+            new Message(MessageRoleEnum::user(), [new MessagePart('What is the weather in Helsinki?')]),
+            new Message(MessageRoleEnum::model(), [new MessagePart('[calling get_weather with {"city":"Helsinki"}]')]),
+            new Message(MessageRoleEnum::user(), [new MessagePart('[result of get_weather] 21C and sunny')]),
+        ]);
+
+        $this->assertArrayNotHasKey('tool_choice', $params);
+    }
+
+    /**
+     * Tests that tool use is not forced after a native tool response either.
+     */
+    public function testToolChoiceIsNotForcedAfterAToolResponse(): void
+    {
+        $model = $this->createModel($this->configWithTools());
+        $params = $model->exposePrepareGenerateTextParams([
+            new Message(MessageRoleEnum::user(), [new MessagePart('What is the weather in Helsinki?')]),
+            new Message(MessageRoleEnum::model(), [
+                new MessagePart(new FunctionCall('call_1', 'get_weather', ['city' => 'Helsinki'])),
+            ]),
+            new Message(MessageRoleEnum::user(), [
+                new MessagePart(new FunctionResponse('call_1', 'get_weather', ['temperature' => 21])),
+            ]),
+        ]);
+
+        $this->assertArrayNotHasKey('tool_choice', $params);
+    }
+
+    /**
+     * Tests that a tool_choice the caller asked for is left alone.
+     */
+    public function testCallerSuppliedToolChoiceIsKept(): void
+    {
+        $config = $this->configWithTools();
+        $config->setCustomOptions(['tool_choice' => 'none']);
+
+        $model = $this->createModel($config);
+        $params = $model->exposePrepareGenerateTextParams(
+            [new Message(MessageRoleEnum::user(), [new MessagePart('Just say hello.')])]
+        );
+
+        $this->assertSame('none', $params['tool_choice'] ?? null);
+    }
+
+    /**
+     * A model config declaring one tool.
+     */
+    private function configWithTools(): ModelConfig
+    {
+        $config = new ModelConfig();
+        $config->setFunctionDeclarations([
+            new FunctionDeclaration(
+                'get_weather',
+                'Returns the current weather for a city.',
+                [
+                    'type' => 'object',
+                    'properties' => ['city' => ['type' => 'string']],
+                    'required' => ['city'],
+                ]
+            ),
+        ]);
+
+        return $config;
+    }
+
+    /**
+     * A model whose single response carries the given finish reason.
+     */
+    private function createModelForFinishReason(string $finishReason): MockProviderForMistralTextGenerationModel
+    {
+        $response = new Response(
+            200,
+            [],
+            json_encode([
+                'id' => 'chatcmpl_123',
+                'choices' => [
+                    [
+                        'message' => ['role' => 'assistant', 'content' => 'Partial...'],
+                        'finish_reason' => $finishReason,
+                    ],
+                ],
+                'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5, 'total_tokens' => 15],
+            ])
+        );
+
+        $this->mockRequestAuthentication
+            ->expects($this->once())
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        $this->mockHttpTransporter
+            ->expects($this->once())
+            ->method('send')
+            ->willReturn($response);
+
+        return $this->createModel();
     }
 
     /**
