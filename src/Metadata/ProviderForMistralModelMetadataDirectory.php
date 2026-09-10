@@ -55,6 +55,23 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
     ];
 
     /**
+     * Embedding model IDs that accept the `output_dimension` parameter.
+     *
+     * The models API reports nothing about this, and asking for a shortened vector from
+     * a model without the feature is a 400. Only the models listed here declare support
+     * for the dimensions option, which keeps that request off the models that answer it
+     * with an error: model resolution passes over them and settles on one of these.
+     *
+     * @since x.x.x
+     *
+     * @var list<string>
+     */
+    private const KNOWN_TRUNCATABLE_EMBEDDING_MODELS = [
+        'codestral-embed',
+        'codestral-embed-2505',
+    ];
+
+    /**
      * {@inheritDoc}
      *
      * Extends the base implementation to add hardcoded image generation model
@@ -97,6 +114,58 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
         }
 
         return $resortedMap;
+    }
+
+    /**
+     * Determines whether a model that reports no chat capability generates embeddings.
+     *
+     * Mistral's models API reports every capability as false for its embedding models, so
+     * they are recognised by ID. Callers check this only for models without chat support,
+     * which keeps a chat model that happens to carry "embed" in its ID out of the way.
+     *
+     * The capability is withheld on an AI client without embedding support, so that the
+     * embedding model class is never loaded where it could not be.
+     *
+     * @since x.x.x
+     *
+     * @param string $modelId The model ID.
+     * @return bool True if the model generates embeddings and the client can use them.
+     */
+    private static function supportsEmbeddingGeneration(string $modelId): bool
+    {
+        if (!ProviderForMistral::supportsEmbeddingGeneration()) {
+            return false;
+        }
+
+        return strpos($modelId, 'embed') !== false;
+    }
+
+    /**
+     * Builds the metadata for an embedding generation model.
+     *
+     * @since x.x.x
+     *
+     * @param string $modelId The model ID.
+     * @param string $modelName The model display name.
+     * @return ModelMetadata The embedding model metadata.
+     */
+    private static function createEmbeddingModelMetadata(string $modelId, string $modelName): ModelMetadata
+    {
+        $options = [
+            new SupportedOption(OptionEnum::inputModalities(), [[ModalityEnum::text()]]),
+            new SupportedOption(OptionEnum::customOptions()),
+        ];
+
+        if (in_array($modelId, self::KNOWN_TRUNCATABLE_EMBEDDING_MODELS, true)) {
+            $options[] = new SupportedOption(OptionEnum::dimensions());
+        }
+
+        return new ModelMetadata(
+            $modelId,
+            $modelName,
+            [CapabilityEnum::embeddingGeneration()],
+            $options
+        );
     }
 
     /**
@@ -206,6 +275,10 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
                     $supportsAudioInput = str_starts_with($modelId, 'voxtral-');
 
                     if (!$supportsChat) {
+                        if (self::supportsEmbeddingGeneration($modelId)) {
+                            return self::createEmbeddingModelMetadata($modelId, $modelName);
+                        }
+
                         return new ModelMetadata($modelId, $modelName, [], []);
                     }
 
@@ -292,14 +365,14 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
         $aId = $a->getId();
         $bId = $b->getId();
 
-        // 1. Chat-capable models before non-chat (embeddings, moderation).
-        $aHasChat = !empty($a->getSupportedCapabilities());
-        $bHasChat = !empty($b->getSupportedCapabilities());
-        if ($aHasChat && !$bHasChat) {
-            return -1;
-        }
-        if ($bHasChat && !$aHasChat) {
+        // 1. Text and image models before the tail (embeddings, moderation, unusable entries).
+        $aInTail = $this->sortsToTail($a);
+        $bInTail = $this->sortsToTail($b);
+        if ($aInTail && !$bInTail) {
             return 1;
+        }
+        if ($bInTail && !$aInTail) {
+            return -1;
         }
 
         // 2. Legacy open-weights models sink.
@@ -341,6 +414,30 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
     }
 
     /**
+     * Determines whether a model sorts into the tail of the list.
+     *
+     * Text and image models are what integrations reach for most, so everything else
+     * sorts below them and the family rank then orders the tail among itself. This used
+     * to be a test for any capability at all, which stopped separating anything once
+     * embedding models started carrying a capability of their own.
+     *
+     * @since x.x.x
+     *
+     * @param ModelMetadata $model The model to place.
+     * @return bool True if the model belongs below the text and image models.
+     */
+    private function sortsToTail(ModelMetadata $model): bool
+    {
+        foreach ($model->getSupportedCapabilities() as $capability) {
+            if ($capability->isTextGeneration() || $capability->isImageGeneration()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Returns a family rank for a model id; lower ranks surface earlier.
      *
      * @since 1.2.0
@@ -360,9 +457,10 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
             return 30;
         }
         if (str_starts_with($id, 'codestral-') || str_starts_with($id, 'devstral-')) {
-            // Embedding variants of Codestral are handled by the embed rank below.
+            // Code embedding models rank below the general-purpose ones, so that a request
+            // that names no model gets a general text embedding rather than a code one.
             if (str_contains($id, 'embed')) {
-                return 110;
+                return 115;
             }
             return 40;
         }
@@ -384,7 +482,7 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
         if (str_starts_with($id, 'mistral-moderation')) {
             return 100;
         }
-        if ($id === 'mistral-embed' || str_ends_with($id, '-embed')) {
+        if (str_contains($id, 'embed')) {
             return 110;
         }
 

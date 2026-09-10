@@ -69,7 +69,7 @@ class MultimodalIntegrationTest extends TestCase
 
         $firstChatModelId = null;
         foreach ($this->models as $model) {
-            if ($model->getSupportedCapabilities() !== []) {
+            if ($this->generatesText($model)) {
                 $firstChatModelId = $model->getId();
                 break;
             }
@@ -83,28 +83,70 @@ class MultimodalIntegrationTest extends TestCase
         );
     }
 
-    public function testNonChatModelsSinkBelowAllChatModels(): void
+    /**
+     * Tests that models which generate nothing from a prompt sort below those that do.
+     *
+     * Embeddings, moderation and anything this provider has no model class for all belong
+     * below the text and image models. Classifying them by whether they carry any
+     * capability at all stopped working once embedding models gained one of their own.
+     */
+    public function testModelsThatGenerateNothingSinkBelowTheOnesThatDo(): void
     {
-        $lastChatIndex = null;
-        $firstNonChatIndex = null;
+        $lastGeneratingIndex = null;
+        $firstTailIndex = null;
 
         foreach ($this->models as $index => $model) {
-            if ($model->getSupportedCapabilities() !== []) {
-                $lastChatIndex = $index;
-            } elseif ($firstNonChatIndex === null) {
-                $firstNonChatIndex = $index;
+            if ($this->generatesFromPrompt($model)) {
+                $lastGeneratingIndex = $index;
+            } elseif ($firstTailIndex === null) {
+                $firstTailIndex = $index;
             }
         }
 
-        if ($firstNonChatIndex === null) {
-            $this->markTestSkipped('No non-chat models returned by the API; nothing to verify.');
+        if ($firstTailIndex === null) {
+            $this->markTestSkipped('Every model returned by the API generates from a prompt.');
         }
 
-        $this->assertNotNull($lastChatIndex);
+        $this->assertNotNull($lastGeneratingIndex);
         $this->assertGreaterThan(
-            $lastChatIndex,
-            $firstNonChatIndex,
-            'Non-chat models (embeddings, moderation) should sort after every chat-capable model.'
+            $lastGeneratingIndex,
+            $firstTailIndex,
+            'Embeddings, moderation and unusable entries should sort after every text and image model.'
+        );
+    }
+
+    /**
+     * Tests that the embedding models sort into the tail rather than among the chat models.
+     */
+    public function testEmbeddingModelsSortIntoTheTail(): void
+    {
+        $lastTextIndex = null;
+        $firstEmbeddingIndex = null;
+
+        foreach ($this->models as $index => $model) {
+            if ($this->generatesText($model)) {
+                $lastTextIndex = $index;
+                continue;
+            }
+
+            foreach ($model->getSupportedCapabilities() as $capability) {
+                if ($capability->isEmbeddingGeneration() && $firstEmbeddingIndex === null) {
+                    $firstEmbeddingIndex = $index;
+                }
+            }
+        }
+
+        if ($firstEmbeddingIndex === null) {
+            $this->markTestSkipped(
+                'No embedding models carry the capability; the AI client in use may predate it.'
+            );
+        }
+
+        $this->assertNotNull($lastTextIndex);
+        $this->assertGreaterThan(
+            $lastTextIndex,
+            $firstEmbeddingIndex,
+            'Embedding models should sort after every text generation model.'
         );
     }
 
@@ -116,7 +158,7 @@ class MultimodalIntegrationTest extends TestCase
         foreach ($this->models as $index => $model) {
             $id = $model->getId();
             $isLegacy = str_starts_with($id, 'open-') || str_starts_with($id, 'mathstral');
-            $isChat = $model->getSupportedCapabilities() !== [];
+            $isChat = $this->generatesText($model);
 
             if ($isLegacy) {
                 if ($firstOpenWeightIndex === null) {
@@ -147,6 +189,43 @@ class MultimodalIntegrationTest extends TestCase
             $primaryChatModelSeen,
             'Expected at least one non-legacy chat model before the first legacy open-weights entry.'
         );
+    }
+
+    /**
+     * Determines whether a model generates content from a prompt.
+     *
+     * The default sort places text and image models above everything else, so this is
+     * what separates the two groups.
+     *
+     * @param ModelMetadata $model The model to classify.
+     * @return bool True if the model generates text or images.
+     */
+    private function generatesFromPrompt(ModelMetadata $model): bool
+    {
+        foreach ($model->getSupportedCapabilities() as $capability) {
+            if ($capability->isTextGeneration() || $capability->isImageGeneration()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Determines whether a model generates text.
+     *
+     * @param ModelMetadata $model The model to classify.
+     * @return bool True if the model generates text.
+     */
+    private function generatesText(ModelMetadata $model): bool
+    {
+        foreach ($model->getSupportedCapabilities() as $capability) {
+            if ($capability->isTextGeneration()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function testDocumentInputModalityDeclaredOnChatModels(): void

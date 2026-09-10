@@ -134,9 +134,39 @@ $binaryData = base64_decode($file->getBase64Data(), true);
 file_put_contents('apple.png', $binaryData);
 ```
 
+### Embeddings
+
+Mistral generates [text embeddings](https://docs.mistral.ai/studio/knowledge-rag/embeddings/text_embeddings) through its `/v1/embeddings` endpoint. Every input is embedded in one request, and one vector comes back per input, in the order the inputs were given:
+
+```php
+$embeddings = AiClient::input([
+    'The cat sat on the mat.',
+    'Kubernetes schedules containers.',
+])
+    ->usingProvider('mistral')
+    ->generateEmbeddings();
+
+// 1024 floats per input, from mistral-embed.
+count($embeddings[0]->getValues());
+```
+
+`mistral-embed` returns a fixed 1024 dimensions. `codestral-embed` is tuned for source code, returns 1536 by default, and is the only Mistral model that accepts a shortened vector:
+
+```php
+$embedding = AiClient::input('function add($a, $b) { return $a + $b; }')
+    ->usingProvider('mistral')
+    ->usingModelPreference('codestral-embed')
+    ->usingDimensions(256)
+    ->generateEmbedding();
+```
+
+Two things are worth knowing about picking a model here. A request that names no model gets a general-purpose model rather than the code one. And because a model preference is only a preference, asking `mistral-embed` for a shortened vector answers from `codestral-embed` instead, since `mistral-embed` has no such feature; name the model explicitly if you need a particular one.
+
+Embeddings need PHP AI Client 1.4.0 or newer. WordPress 7.1 bundles 1.3.1, which has no embedding support at all, so on that release the embedding models are listed without the capability and text and image generation carry on unaffected.
+
 ## Supported Models
 
-Available models are dynamically discovered from the Mistral API. This includes text models and, for compatible models, vision and function-calling capabilities. Image generation is supported through models like `mistral-medium-2505`. See the [Mistral documentation](https://docs.mistral.ai/) for the full list of available models.
+Available models are dynamically discovered from the Mistral API. This includes text models and, for compatible models, vision and function-calling capabilities. Image generation is supported through models like `mistral-medium-2505`, and embeddings through `mistral-embed` and `codestral-embed`. See the [Mistral documentation](https://docs.mistral.ai/) for the full list of available models.
 
 ## Configuration
 
@@ -148,7 +178,7 @@ putenv('MISTRAL_API_KEY=your-api-key');
 
 ## External Services
 
-This plugin connects to the [Mistral AI API](https://api.mistral.ai/v1) to provide AI text generation and image generation capabilities.
+This plugin connects to the [Mistral AI API](https://api.mistral.ai/v1) to provide AI text generation, image generation and embedding capabilities.
 
 Data is sent to the Mistral API when your application code makes AI generation requests through the PHP AI Client. The data sent includes your prompts, model configuration, and API key. No data is sent automatically — requests only occur when explicitly triggered by code using the PHP AI Client SDK.
 
