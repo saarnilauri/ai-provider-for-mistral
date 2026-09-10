@@ -4,7 +4,7 @@
 
     <!-- Scan these files -->
     <file>src</file>
-    <file>plugin.php</file>
+    <file>ai-provider-for-mistral.php</file>
 
     <!-- Ignore vendor directory -->
     <exclude-pattern>*/vendor/*</exclude-pattern>
@@ -23,7 +23,7 @@
 
     <!-- WordPress plugin bootstrap files intentionally have side effects -->
     <rule ref="PSR1.Files.SideEffects.FoundWithSymbols">
-        <exclude-pattern>plugin.php</exclude-pattern>
+        <exclude-pattern>ai-provider-for-mistral.php</exclude-pattern>
     </rule>
 
     <!-- Check PHP 7.4 compatibility -->
