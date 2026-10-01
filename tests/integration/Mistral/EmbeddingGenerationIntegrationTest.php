@@ -61,8 +61,7 @@ class EmbeddingGenerationIntegrationTest extends TestCase
     public function testSingleEmbedding(): void
     {
         $embedding = AiClient::input('WordPress is a content management system.', $this->registry)
-            ->usingProvider('mistral')
-            ->usingModelPreference('mistral-embed')
+            ->usingModel(ProviderForMistral::model('mistral-embed'))
             ->generateEmbedding();
 
         $this->assertInstanceOf(Embedding::class, $embedding);
@@ -80,8 +79,7 @@ class EmbeddingGenerationIntegrationTest extends TestCase
             ['The cat sat on the mat.', 'A feline rested on the rug.', 'Kubernetes schedules containers.'],
             $this->registry
         )
-            ->usingProvider('mistral')
-            ->usingModelPreference('mistral-embed')
+            ->usingModel(ProviderForMistral::model('mistral-embed'))
             ->generateEmbeddingResult();
 
         $this->assertInstanceOf(EmbeddingResult::class, $result);
@@ -93,6 +91,31 @@ class EmbeddingGenerationIntegrationTest extends TestCase
             $this->assertCount(self::MISTRAL_EMBED_DIMENSIONS, $embedding->getValues());
         }
 
+        $this->assertGreaterThan(0, $result->getTokenUsage()->getPromptTokens());
+    }
+
+    /**
+     * Tests that more inputs than the endpoint takes in one request still come back whole.
+     *
+     * The endpoint rejects more than 256 inputs per request, so these are split into two
+     * requests. The last input repeats the first, so matching vectors at both ends show
+     * the second batch was put back in its place.
+     */
+    public function testInputsBeyondTheRequestLimitAreSplitAndRecombined(): void
+    {
+        $texts = array_map(static fn (int $index): string => "Sentence number {$index}.", range(0, 298));
+        $texts[] = $texts[0];
+
+        $result = AiClient::input($texts, $this->registry)
+            ->usingModel(ProviderForMistral::model('mistral-embed'))
+            ->generateEmbeddingResult();
+
+        $embeddings = $result->getEmbeddings();
+        $this->assertCount(300, $embeddings);
+        $this->assertGreaterThan(
+            0.999,
+            $this->cosineSimilarity($embeddings[0]->getValues(), $embeddings[299]->getValues())
+        );
         $this->assertGreaterThan(0, $result->getTokenUsage()->getPromptTokens());
     }
 
@@ -110,8 +133,7 @@ class EmbeddingGenerationIntegrationTest extends TestCase
             ['The cat sat on the mat.', 'A feline rested on the rug.', 'Kubernetes schedules containers.'],
             $this->registry
         )
-            ->usingProvider('mistral')
-            ->usingModelPreference('mistral-embed')
+            ->usingModel(ProviderForMistral::model('mistral-embed'))
             ->generateEmbeddings();
 
         $this->assertCount(3, $embeddings);
@@ -132,54 +154,12 @@ class EmbeddingGenerationIntegrationTest extends TestCase
     public function testRequestedDimensionsAreHonouredWhereSupported(): void
     {
         $embedding = AiClient::input('function add($a, $b) { return $a + $b; }', $this->registry)
-            ->usingProvider('mistral')
-            ->usingModelPreference('codestral-embed')
+            ->usingModel(ProviderForMistral::model('codestral-embed'))
             ->usingDimensions(256)
             ->generateEmbedding();
 
         $this->assertSame(256, $embedding->getDimensions());
         $this->assertCount(256, $embedding->getValues());
-    }
-
-    /**
-     * Tests that asking a model without the feature for a shortened vector moves to one with it.
-     *
-     * mistral-embed answers a request carrying output_dimension with a 400, so it does not
-     * advertise the option. A model preference is only a preference, so the request lands on
-     * a model that does support it rather than failing. This is worth pinning because the
-     * model that answers is not the one that was asked for.
-     */
-    public function testRequestedDimensionsMoveToAModelThatSupportsThem(): void
-    {
-        $result = AiClient::input('Some text to embed.', $this->registry)
-            ->usingProvider('mistral')
-            ->usingModelPreference('mistral-embed')
-            ->usingDimensions(256)
-            ->generateEmbeddingResult();
-
-        $this->assertSame(256, $result->getDimensions());
-        $this->assertStringContainsString(
-            'codestral-embed',
-            $result->getModelMetadata()->getId(),
-            'A shortened vector should come from a model that advertises the dimensions option.'
-        );
-    }
-
-    /**
-     * Tests that a request naming no model gets a general-purpose text embedding model.
-     *
-     * The embedding models all sort into the tail of the model list, and within it the
-     * general-purpose ones rank above the code-specialised ones, so plain text does not
-     * quietly get embedded by codestral-embed.
-     */
-    public function testDefaultEmbeddingModelIsGeneralPurpose(): void
-    {
-        $result = AiClient::input('WordPress is a content management system.', $this->registry)
-            ->usingProvider('mistral')
-            ->generateEmbeddingResult();
-
-        $this->assertStringContainsString('mistral-embed', $result->getModelMetadata()->getId());
-        $this->assertSame(self::MISTRAL_EMBED_DIMENSIONS, $result->getDimensions());
     }
 
     /**

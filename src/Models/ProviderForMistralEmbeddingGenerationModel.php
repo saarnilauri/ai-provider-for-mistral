@@ -22,7 +22,12 @@ use WordPress\AiClient\Results\DTO\TokenUsage;
  * Class for embedding generation models used by the provider for Mistral.
  *
  * Embeddings come from the `/v1/embeddings` endpoint, which takes a batch of texts
- * and returns one vector per text.
+ * and returns one vector per text. The endpoint accepts at most 256 texts per request,
+ * so larger inputs are sent as several requests and the results combined in input order.
+ *
+ * The endpoint also caps each text at 8192 tokens and each request at roughly 64k
+ * tokens in total. Those limits cannot be checked without Mistral's tokenizer, so a
+ * request exceeding them is left to fail with the API's own error.
  *
  * Only `codestral-embed` accepts `output_dimension`; `mistral-embed` returns a fixed
  * 1024 dimensions and answers the parameter with a 400. The model metadata declares the
@@ -45,6 +50,18 @@ class ProviderForMistralEmbeddingGenerationModel extends AbstractApiBasedModel i
     EmbeddingGenerationModelInterface
 {
     /**
+     * The maximum number of inputs the embeddings endpoint accepts per request.
+     *
+     * Confirmed against the live endpoint, which answers 257 inputs with a 400
+     * (`code 3210`, "Too many inputs in request, split into more batches.").
+     *
+     * @since x.x.x
+     *
+     * @var int
+     */
+    protected const MAX_BATCH_SIZE = 256;
+
+    /**
      * {@inheritDoc}
      *
      * @since x.x.x
@@ -54,21 +71,31 @@ class ProviderForMistralEmbeddingGenerationModel extends AbstractApiBasedModel i
      */
     public function generateEmbeddingResult(array $inputs): EmbeddingResult
     {
+        // Every input is validated before anything is sent, so invalid input sends no request.
         $params = $this->prepareGenerateEmbeddingsParams($inputs);
 
-        $request = new Request(
-            HttpMethodEnum::POST(),
-            ProviderForMistral::url('embeddings'),
-            ['Content-Type' => 'application/json'],
-            $params,
-            $this->getRequestOptions()
-        );
+        /** @var non-empty-list<string> $texts */
+        $texts = $params['input'];
 
-        $request = $this->getRequestAuthentication()->authenticateRequest($request);
-        $response = $this->getHttpTransporter()->send($request);
-        ResponseUtil::throwIfNotSuccessful($response);
+        $results = [];
+        foreach (array_chunk($texts, self::MAX_BATCH_SIZE) as $textsChunk) {
+            $request = new Request(
+                HttpMethodEnum::POST(),
+                ProviderForMistral::url('embeddings'),
+                ['Content-Type' => 'application/json'],
+                array_merge($params, ['input' => $textsChunk]),
+                $this->getRequestOptions()
+            );
 
-        return $this->parseResponseToEmbeddingResult($response, count($inputs));
+            $request = $this->getRequestAuthentication()->authenticateRequest($request);
+            $response = $this->getHttpTransporter()->send($request);
+            ResponseUtil::throwIfNotSuccessful($response);
+
+            // Each response indexes its vectors from zero, relative to its own request.
+            $results[] = $this->parseResponseToEmbeddingResult($response, count($textsChunk));
+        }
+
+        return $this->combineEmbeddingResults($results);
     }
 
     /**
@@ -261,6 +288,64 @@ class ProviderForMistralEmbeddingGenerationModel extends AbstractApiBasedModel i
             $embeddings,
             $dimensions,
             $this->parseTokenUsage($responseData['usage'] ?? null),
+            $this->providerMetadata(),
+            $this->metadata(),
+            $additionalData
+        );
+    }
+
+    /**
+     * Combines the results of several batch requests into one embedding result.
+     *
+     * No single response ID covers the combined result, so its ID is empty and the
+     * per-request `id` and `usage` are dropped from the additional data; the summed
+     * usage is on the result's token usage instead.
+     *
+     * @since x.x.x
+     *
+     * @param non-empty-list<EmbeddingResult> $results The results, in input order.
+     * @return EmbeddingResult The combined embedding result.
+     * @throws ResponseException If the results differ in vector length.
+     */
+    protected function combineEmbeddingResults(array $results): EmbeddingResult
+    {
+        if (count($results) === 1) {
+            return $results[0];
+        }
+
+        $dimensions = $results[0]->getDimensions();
+        $embeddings = [];
+        $promptTokens = 0;
+        $completionTokens = 0;
+        $totalTokens = 0;
+        foreach ($results as $position => $result) {
+            if ($result->getDimensions() !== $dimensions) {
+                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+                throw ResponseException::fromInvalidData(
+                    $this->providerMetadata()->getName(),
+                    'data',
+                    sprintf('The vectors in batch %d differ in length from the first batch.', $position)
+                );
+            }
+
+            foreach ($result->getEmbeddings() as $embedding) {
+                $embeddings[] = $embedding;
+            }
+
+            $tokenUsage = $result->getTokenUsage();
+            $promptTokens += $tokenUsage->getPromptTokens();
+            $completionTokens += $tokenUsage->getCompletionTokens();
+            $totalTokens += $tokenUsage->getTotalTokens();
+        }
+
+        $additionalData = $results[0]->getAdditionalData();
+        unset($additionalData['id'], $additionalData['usage']);
+
+        return new EmbeddingResult(
+            '',
+            $embeddings,
+            $dimensions,
+            new TokenUsage($promptTokens, $completionTokens, $totalTokens),
             $this->providerMetadata(),
             $this->metadata(),
             $additionalData

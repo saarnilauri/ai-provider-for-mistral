@@ -215,6 +215,134 @@ class ProviderForMistralEmbeddingGenerationModelTest extends TestCase
     }
 
     /**
+     * Tests that a batch at the endpoint's input limit is still sent as one request.
+     */
+    public function testBatchAtTheInputLimitIsSentAsOneRequest(): void
+    {
+        $texts = array_map(static fn (int $index): string => "text {$index}", range(0, 255));
+        $entries = array_map(static fn (int $index): array => ['embedding' => [0.1], 'index' => $index], range(0, 255));
+
+        $capturedRequest = null;
+        $this->expectSend(new Response(200, [], $this->buildResponseBody($entries)), $capturedRequest);
+
+        $result = $this->createModel()->generateEmbeddingResult($this->createInputs($texts));
+
+        $this->assertInstanceOf(Request::class, $capturedRequest);
+        $data = $capturedRequest->getData();
+        $this->assertIsArray($data);
+        $this->assertSame($texts, $data['input']);
+        $this->assertCount(256, $result->getEmbeddings());
+        $this->assertSame('emb_abc123', $result->getId());
+    }
+
+    /**
+     * Tests that inputs beyond the endpoint's limit are split across requests and recombined.
+     *
+     * Each response indexes its vectors relative to its own request, so the second batch
+     * starts again from zero and the combined result must still follow input order.
+     */
+    public function testInputsBeyondTheLimitAreSplitAcrossRequests(): void
+    {
+        $texts = array_map(static fn (int $index): string => "text {$index}", range(0, 256));
+
+        $firstBody = $this->buildResponseBody(
+            array_map(static fn (int $index): array => ['embedding' => [0.1, 0.2], 'index' => $index], range(0, 255))
+        );
+        $secondBody = $this->buildResponseBody(
+            [['embedding' => [0.9, 0.8], 'index' => 0]],
+            [
+                'id' => 'emb_def456',
+                'usage' => ['prompt_tokens' => 4, 'completion_tokens' => 0, 'total_tokens' => 4],
+            ]
+        );
+
+        $this->mockRequestAuthentication
+            ->expects($this->exactly(2))
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        /** @var list<Request> $capturedRequests */
+        $capturedRequests = [];
+        $responses = [new Response(200, [], $firstBody), new Response(200, [], $secondBody)];
+        $this->mockHttpTransporter
+            ->expects($this->exactly(2))
+            ->method('send')
+            ->willReturnCallback(
+                static function (Request $request) use (&$capturedRequests, &$responses): Response {
+                    $capturedRequests[] = $request;
+
+                    return array_shift($responses);
+                }
+            );
+
+        $result = $this->createModel()->generateEmbeddingResult($this->createInputs($texts));
+
+        $this->assertCount(2, $capturedRequests);
+        $firstData = $capturedRequests[0]->getData();
+        $secondData = $capturedRequests[1]->getData();
+        $this->assertIsArray($firstData);
+        $this->assertIsArray($secondData);
+        $this->assertSame(array_slice($texts, 0, 256), $firstData['input']);
+        $this->assertSame(['text 256'], $secondData['input']);
+        $this->assertSame('mistral-embed', $secondData['model']);
+
+        $embeddings = $result->getEmbeddings();
+        $this->assertCount(257, $embeddings);
+        $this->assertSame([0.1, 0.2], $embeddings[0]->getValues());
+        $this->assertSame([0.9, 0.8], $embeddings[256]->getValues());
+        $this->assertSame(2, $result->getDimensions());
+
+        $this->assertSame('', $result->getId());
+        $this->assertSame(19, $result->getTokenUsage()->getPromptTokens());
+        $this->assertSame(19, $result->getTokenUsage()->getTotalTokens());
+        $this->assertArrayNotHasKey('id', $result->getAdditionalData());
+        $this->assertArrayNotHasKey('usage', $result->getAdditionalData());
+    }
+
+    /**
+     * Tests that an invalid input past the first batch stops every request from being sent.
+     */
+    public function testInvalidInputInALaterBatchSendsNoRequest(): void
+    {
+        $texts = array_map(static fn (int $index): string => "text {$index}", range(0, 255));
+        $texts[] = '   ';
+
+        $this->mockHttpTransporter->expects($this->never())->method('send');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('index 256');
+
+        $this->createModel()->generateEmbeddingResult($this->createInputs($texts));
+    }
+
+    /**
+     * Tests that batches returning vectors of different lengths are rejected.
+     */
+    public function testBatchesWithDifferentVectorLengthsThrow(): void
+    {
+        $texts = array_map(static fn (int $index): string => "text {$index}", range(0, 256));
+
+        $this->mockRequestAuthentication->method('authenticateRequest')->willReturnArgument(0);
+
+        $responses = [
+            new Response(200, [], $this->buildResponseBody(
+                array_map(static fn (int $index): array => ['embedding' => [0.1, 0.2], 'index' => $index], range(0, 255))
+            )),
+            new Response(200, [], $this->buildResponseBody([['embedding' => [0.9], 'index' => 0]])),
+        ];
+        $this->mockHttpTransporter
+            ->method('send')
+            ->willReturnCallback(static function () use (&$responses): Response {
+                return array_shift($responses);
+            });
+
+        $this->expectException(ResponseException::class);
+        $this->expectExceptionMessage('batch 1');
+
+        $this->createModel()->generateEmbeddingResult($this->createInputs($texts));
+    }
+
+    /**
      * Tests that configured dimensions are sent as output_dimension.
      */
     public function testDimensionsAreSentAsOutputDimension(): void

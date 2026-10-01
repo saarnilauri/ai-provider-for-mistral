@@ -136,14 +136,18 @@ file_put_contents('apple.png', $binaryData);
 
 ### Embeddings
 
-Mistral generates [text embeddings](https://docs.mistral.ai/studio/knowledge-rag/embeddings/text_embeddings) through its `/v1/embeddings` endpoint. Every input is embedded in one request, and one vector comes back per input, in the order the inputs were given:
+Mistral generates [text embeddings](https://docs.mistral.ai/studio/knowledge-rag/embeddings/text_embeddings) through its `/v1/embeddings` endpoint. One vector comes back per input, in the order the inputs were given.
+
+Always name the embedding model. Vectors are only comparable with other vectors from the same model, so a stored corpus is tied to the model that produced it, and letting the library pick could quietly make new vectors incompatible with the ones already saved.
 
 ```php
+use SaarniLauri\AiProviderForMistral\Provider\ProviderForMistral;
+
 $embeddings = AiClient::input([
     'The cat sat on the mat.',
     'Kubernetes schedules containers.',
 ])
-    ->usingProvider('mistral')
+    ->usingModel(ProviderForMistral::model('mistral-embed'))
     ->generateEmbeddings();
 
 // 1024 floats per input, from mistral-embed.
@@ -154,13 +158,14 @@ count($embeddings[0]->getValues());
 
 ```php
 $embedding = AiClient::input('function add($a, $b) { return $a + $b; }')
-    ->usingProvider('mistral')
-    ->usingModelPreference('codestral-embed')
+    ->usingModel(ProviderForMistral::model('codestral-embed'))
     ->usingDimensions(256)
     ->generateEmbedding();
 ```
 
-Two things are worth knowing about picking a model here. A request that names no model gets a general-purpose model rather than the code one. And because a model preference is only a preference, asking `mistral-embed` for a shortened vector answers from `codestral-embed` instead, since `mistral-embed` has no such feature; name the model explicitly if you need a particular one.
+Asking `mistral-embed` for a shortened vector is an error, since it has no such feature.
+
+The endpoint takes at most 256 inputs per request. Larger inputs are split across several requests automatically and come back as one result, in input order, with the token usage summed. Two limits are left to the API to enforce, because checking them needs Mistral's tokenizer: each input may be at most 8192 tokens, and each request of up to 256 inputs at most about 64k tokens in total. Going over either fails with an error from Mistral asking you to split the input.
 
 Embeddings need PHP AI Client 1.4.0 or newer. WordPress 7.1 bundles 1.3.1, which has no embedding support at all, so on that release the embedding models are listed without the capability and text and image generation carry on unaffected.
 

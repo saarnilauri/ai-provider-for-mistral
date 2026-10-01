@@ -457,8 +457,8 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
             return 30;
         }
         if (str_starts_with($id, 'codestral-') || str_starts_with($id, 'devstral-')) {
-            // Code embedding models rank below the general-purpose ones, so that a request
-            // that names no model gets a general text embedding rather than a code one.
+            // Code embedding models rank below the general-purpose ones, so model lists
+            // offer the general text embedding model first.
             if (str_contains($id, 'embed')) {
                 return 115;
             }

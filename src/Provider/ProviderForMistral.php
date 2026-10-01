@@ -118,12 +118,21 @@ class ProviderForMistral extends AbstractApiProvider
         ];
         // Provider description support was added in 1.2.0.
         if (version_compare(AiClient::VERSION, '1.2.0', '>=')) {
+            /*
+             * Embeddings are only mentioned where the client can generate them. Each
+             * variant stays a literal string so that translation tooling can extract it.
+             */
+            $supportsEmbeddings = self::supportsEmbeddingGeneration();
             // For WordPress, we should translate the description.
             if (function_exists('__')) {
-                // phpcs:ignore Generic.Files.LineLength.TooLong
-                $providerMetadataArgs[] = __('Text and image generation with Mistral AI models.', 'ai-provider-for-mistral');
+                $providerMetadataArgs[] = $supportsEmbeddings
+                    // phpcs:ignore Generic.Files.LineLength.TooLong
+                    ? __('Text, image, and embedding generation with Mistral AI models.', 'ai-provider-for-mistral')
+                    : __('Text and image generation with Mistral AI models.', 'ai-provider-for-mistral');
             } else {
-                $providerMetadataArgs[] = 'Text and image generation with Mistral AI models.';
+                $providerMetadataArgs[] = $supportsEmbeddings
+                    ? 'Text, image, and embedding generation with Mistral AI models.'
+                    : 'Text and image generation with Mistral AI models.';
             }
         }
         // Provider logoPath support was added in 1.3.0.
