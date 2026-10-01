@@ -62,7 +62,7 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
      * for the dimensions option, which keeps that request off the models that answer it
      * with an error: model resolution passes over them and settles on one of these.
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @var list<string>
      */
@@ -126,7 +126,7 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
      * The capability is withheld on an AI client without embedding support, so that the
      * embedding model class is never loaded where it could not be.
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @param string $modelId The model ID.
      * @return bool True if the model generates embeddings and the client can use them.
@@ -143,7 +143,7 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
     /**
      * Builds the metadata for an embedding generation model.
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @param string $modelId The model ID.
      * @param string $modelName The model display name.
@@ -421,7 +421,7 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
      * to be a test for any capability at all, which stopped separating anything once
      * embedding models started carrying a capability of their own.
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @param ModelMetadata $model The model to place.
      * @return bool True if the model belongs below the text and image models.

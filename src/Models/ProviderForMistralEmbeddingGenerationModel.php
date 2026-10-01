@@ -34,7 +34,7 @@ use WordPress\AiClient\Results\DTO\TokenUsage;
  * option only for the models that support it, so a request for a shortened vector is
  * resolved onto one of those rather than reaching a model that would reject it.
  *
- * @since x.x.x
+ * @since n.e.x.t
  *
  * @phpstan-type EmbeddingData array{object?: string, embedding?: list<float|int>, index?: int}
  * @phpstan-type UsageData array{prompt_tokens?: int, completion_tokens?: int, total_tokens?: int}
@@ -55,7 +55,7 @@ class ProviderForMistralEmbeddingGenerationModel extends AbstractApiBasedModel i
      * Confirmed against the live endpoint, which answers 257 inputs with a 400
      * (`code 3210`, "Too many inputs in request, split into more batches.").
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @var int
      */
@@ -64,7 +64,7 @@ class ProviderForMistralEmbeddingGenerationModel extends AbstractApiBasedModel i
     /**
      * {@inheritDoc}
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @param list<MessagePart> $inputs The inputs to embed, one embedding generated per input.
      * @return EmbeddingResult Result containing one embedding per input, in input order.
@@ -101,7 +101,7 @@ class ProviderForMistralEmbeddingGenerationModel extends AbstractApiBasedModel i
     /**
      * Prepares the given inputs and the model configuration into parameters for the API request.
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @param list<MessagePart> $inputs The inputs to embed, one embedding generated per input.
      * @return array<string, mixed> The parameters for the API request.
@@ -150,7 +150,7 @@ class ProviderForMistralEmbeddingGenerationModel extends AbstractApiBasedModel i
     /**
      * Prepares a single message part into one embeddings input string.
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @param MessagePart $part The message part that makes up one embedding input.
      * @param int $index The index of the part within the input list, used for error messages.
@@ -180,7 +180,7 @@ class ProviderForMistralEmbeddingGenerationModel extends AbstractApiBasedModel i
     /**
      * Parses an embeddings response into an embedding result.
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @param Response $response The API response.
      * @param int $expectedCount The number of inputs sent, and therefore of vectors expected.
@@ -301,7 +301,7 @@ class ProviderForMistralEmbeddingGenerationModel extends AbstractApiBasedModel i
      * per-request `id` and `usage` are dropped from the additional data; the summed
      * usage is on the result's token usage instead.
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @param non-empty-list<EmbeddingResult> $results The results, in input order.
      * @return EmbeddingResult The combined embedding result.
@@ -355,7 +355,7 @@ class ProviderForMistralEmbeddingGenerationModel extends AbstractApiBasedModel i
     /**
      * Parses the token usage reported alongside the embeddings.
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @param mixed $usageData The `usage` value from the response, if any.
      * @return TokenUsage The token usage, zeroed where the response omits a count.

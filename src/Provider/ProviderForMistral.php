@@ -30,7 +30,7 @@ class ProviderForMistral extends AbstractApiProvider
     /**
      * The AI client version that introduced embedding generation.
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @var string
      */
@@ -44,7 +44,7 @@ class ProviderForMistral extends AbstractApiProvider
      * model class impossible to load. Nothing may advertise the capability or construct
      * that class unless this returns true.
      *
-     * @since x.x.x
+     * @since n.e.x.t
      *
      * @return bool True if embedding generation is available.
      */
