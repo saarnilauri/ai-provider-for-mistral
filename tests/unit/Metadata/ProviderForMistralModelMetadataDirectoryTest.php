@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SaarniLauri\AiProviderForMistral\Tests\Unit\Metadata;
 
 use PHPUnit\Framework\TestCase;
+use SaarniLauri\AiProviderForMistral\Provider\ProviderForMistral;
+use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Messages\Enums\ModalityEnum;
 use WordPress\AiClient\Providers\Http\DTO\Response;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
@@ -42,6 +44,12 @@ class ProviderForMistralModelMetadataDirectoryTest extends TestCase
                             'completion_chat' => false,
                         ],
                     ],
+                    [
+                        'id' => 'mistral-moderation-latest',
+                        'capabilities' => [
+                            'completion_chat' => false,
+                        ],
+                    ],
                 ],
             ])
         );
@@ -49,7 +57,7 @@ class ProviderForMistralModelMetadataDirectoryTest extends TestCase
         $directory = new MockProviderForMistralModelMetadataDirectory();
         $models = $directory->exposeParseResponseToModelMetadataList($response);
 
-        $this->assertCount(2, $models);
+        $this->assertCount(3, $models);
 
         $chatModel = $models[0];
         $this->assertInstanceOf(ModelMetadata::class, $chatModel);
@@ -74,10 +82,144 @@ class ProviderForMistralModelMetadataDirectoryTest extends TestCase
             )
         );
 
-        $nonChatModel = $models[1];
-        $this->assertSame('mistral-embed', $nonChatModel->getId());
-        $this->assertSame([], $nonChatModel->getSupportedCapabilities());
-        $this->assertSame([], $nonChatModel->getSupportedOptions());
+        // A non-chat model this provider has no model class for gets nothing. The tail of
+        // the list is ordered by family rank, which puts moderation ahead of embeddings.
+        $unusableModel = $models[1];
+        $this->assertSame('mistral-moderation-latest', $unusableModel->getId());
+        $this->assertSame([], $unusableModel->getSupportedCapabilities());
+        $this->assertSame([], $unusableModel->getSupportedOptions());
+
+        $this->assertSame('mistral-embed', $models[2]->getId());
+    }
+
+    /**
+     * Tests that an embedding model is recognised by ID and given the embedding capability.
+     *
+     * Mistral reports every capability as false for these models, so there is nothing in
+     * the API response to key on.
+     */
+    public function testEmbeddingModelGetsTheEmbeddingCapability(): void
+    {
+        $this->requireEmbeddingSupport();
+
+        $response = new Response(
+            200,
+            [],
+            (string) json_encode([
+                'data' => [
+                    ['id' => 'mistral-embed', 'capabilities' => ['completion_chat' => false]],
+                ],
+            ])
+        );
+
+        $directory = new MockProviderForMistralModelMetadataDirectory();
+        $models = $directory->exposeParseResponseToModelMetadataList($response);
+
+        $embeddingModel = $models[0];
+        $this->assertSame('mistral-embed', $embeddingModel->getId());
+        $this->assertSame(
+            [CapabilityEnum::embeddingGeneration()],
+            $embeddingModel->getSupportedCapabilities()
+        );
+
+        $embeddingOptionNames = array_map(
+            static fn (SupportedOption $option): string => $option->getName()->value,
+            $embeddingModel->getSupportedOptions()
+        );
+        $this->assertContains(OptionEnum::inputModalities()->value, $embeddingOptionNames);
+        // mistral-embed returns a fixed vector length and rejects output_dimension.
+        $this->assertNotContains(OptionEnum::dimensions()->value, $embeddingOptionNames);
+    }
+
+    /**
+     * Skips the calling test where the AI client in use has no embedding support.
+     */
+    private function requireEmbeddingSupport(): void
+    {
+        if (!ProviderForMistral::supportsEmbeddingGeneration()) {
+            $this->markTestSkipped(sprintf(
+                'Embedding generation needs AI client %s or newer, and %s is installed.',
+                ProviderForMistral::EMBEDDING_GENERATION_MIN_CLIENT_VERSION,
+                AiClient::VERSION
+            ));
+        }
+    }
+
+    /**
+     * Tests that embedding models sort into the tail, general-purpose ones ahead of code ones.
+     *
+     * The first embedding model in the list is the one a request that names no model gets,
+     * so a code embedding model must not sit ahead of a general-purpose one.
+     */
+    public function testEmbeddingModelsSortIntoTheTailGeneralPurposeFirst(): void
+    {
+        $this->requireEmbeddingSupport();
+
+        $response = new Response(
+            200,
+            [],
+            (string) json_encode([
+                'data' => [
+                    ['id' => 'codestral-embed', 'capabilities' => ['completion_chat' => false]],
+                    ['id' => 'mistral-embed', 'capabilities' => ['completion_chat' => false]],
+                    ['id' => 'mistral-large-latest', 'capabilities' => ['completion_chat' => true]],
+                    ['id' => 'mistral-moderation-latest', 'capabilities' => ['completion_chat' => false]],
+                ],
+            ])
+        );
+
+        $directory = new MockProviderForMistralModelMetadataDirectory();
+        $models = $directory->exposeParseResponseToModelMetadataList($response);
+
+        $ids = array_map(static fn (ModelMetadata $m): string => $m->getId(), $models);
+
+        $this->assertSame(
+            [
+                'mistral-large-latest',
+                'mistral-moderation-latest',
+                'mistral-embed',
+                'codestral-embed',
+            ],
+            $ids
+        );
+    }
+
+    /**
+     * Tests that only the embedding models that accept output_dimension advertise the option.
+     */
+    public function testDimensionsOptionOnlyOnTruncatableEmbeddingModels(): void
+    {
+        $this->requireEmbeddingSupport();
+
+        $response = new Response(
+            200,
+            [],
+            (string) json_encode([
+                'data' => [
+                    ['id' => 'mistral-embed', 'capabilities' => ['completion_chat' => false]],
+                    ['id' => 'codestral-embed', 'capabilities' => ['completion_chat' => false]],
+                    ['id' => 'codestral-embed-2505', 'capabilities' => ['completion_chat' => false]],
+                ],
+            ])
+        );
+
+        $directory = new MockProviderForMistralModelMetadataDirectory();
+        $models = $directory->exposeParseResponseToModelMetadataList($response);
+
+        $dimensionsById = [];
+        foreach ($models as $model) {
+            $dimensionsById[$model->getId()] = $this->findOption($model, OptionEnum::dimensions()) !== null;
+        }
+        ksort($dimensionsById);
+
+        $this->assertSame(
+            [
+                'codestral-embed' => true,
+                'codestral-embed-2505' => true,
+                'mistral-embed' => false,
+            ],
+            $dimensionsById
+        );
     }
 
     /**
