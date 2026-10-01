@@ -16,4 +16,6 @@
 /.claude
 /.env
 /dist
+/CONTRIBUTING.md
+/SECURITY.md
 RELEASE_NOTES_*.md
