@@ -16,6 +16,7 @@ use WordPress\AiClient\Providers\Http\Contracts\HttpTransporterInterface;
 use WordPress\AiClient\Providers\Http\Contracts\RequestAuthenticationInterface;
 use WordPress\AiClient\Providers\Http\DTO\Response;
 use WordPress\AiClient\Providers\Http\Exception\ClientException;
+use WordPress\AiClient\Providers\Http\Exception\ServerException;
 use WordPress\AiClient\Providers\Models\DTO\ModelConfig;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
 use WordPress\AiClient\Results\DTO\GenerativeAiResult;
@@ -280,6 +281,73 @@ class ProviderForMistralTextGenerationModelTest extends TestCase
         $this->expectExceptionMessage('Mistral chat requires document files to be provided as a URL.');
 
         $model->exposeGetMessagePartContentData($part);
+    }
+
+    /**
+     * Tests that generateTextResult() throws TokenLimitReachedException when finish_reason
+     * is "model_length", which Mistral uses for its own context limit.
+     */
+    public function testGenerateTextResultThrowsOnModelLengthFinishReason(): void
+    {
+        $model = $this->createModelForFinishReason('model_length');
+
+        $exception = null;
+        try {
+            $model->generateTextResult([new Message(MessageRoleEnum::user(), [new MessagePart('Hello')])]);
+        } catch (TokenLimitReachedException $e) {
+            $exception = $e;
+        }
+
+        $this->assertInstanceOf(TokenLimitReachedException::class, $exception);
+        $this->assertNull($exception->getMaxTokens());
+        $this->assertStringContainsString('"model_length"', $exception->getMessage());
+    }
+
+    /**
+     * Tests that generateTextResult() reports a finish_reason of "error" as an upstream
+     * failure rather than letting it reach the base class as an unreadable response.
+     */
+    public function testGenerateTextResultThrowsServerExceptionOnErrorFinishReason(): void
+    {
+        $model = $this->createModelForFinishReason('error');
+
+        $this->expectException(ServerException::class);
+        $this->expectExceptionMessage('Mistral stopped generating with finish reason "error" for choice 0');
+
+        $model->generateTextResult([new Message(MessageRoleEnum::user(), [new MessagePart('Hello')])]);
+    }
+
+    /**
+     * A model whose single response carries the given finish reason.
+     */
+    private function createModelForFinishReason(string $finishReason): MockProviderForMistralTextGenerationModel
+    {
+        $response = new Response(
+            200,
+            [],
+            json_encode([
+                'id' => 'chatcmpl_123',
+                'choices' => [
+                    [
+                        'message' => ['role' => 'assistant', 'content' => 'Partial...'],
+                        'finish_reason' => $finishReason,
+                    ],
+                ],
+                'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5, 'total_tokens' => 15],
+            ])
+        );
+
+        $this->mockRequestAuthentication
+            ->expects($this->once())
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        $this->mockHttpTransporter
+            ->expects($this->once())
+            ->method('send')
+            ->willReturn($response);
+
+        return $this->createModel();
     }
 
     /**
