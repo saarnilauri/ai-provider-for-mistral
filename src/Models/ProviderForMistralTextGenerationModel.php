@@ -90,9 +90,31 @@ class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleText
     /**
      * {@inheritDoc}
      *
-     * Adds `tool_choice` set to `"any"` when tools are present to ensure that
-     * Mistral reliably invokes a tool call rather than simulating one in a
-     * plain text response.
+     * Adds `tool_choice` set to `"any"` on the opening turn of a conversation
+     * that declares tools, to ensure that Mistral reliably invokes a tool call
+     * rather than simulating one in a plain text response.
+     *
+     * Only the opening turn, because `"any"` obliges the model to call
+     * something on every request it is sent with, and a model obliged to call
+     * something can never answer in words. Once the conversation contains a
+     * turn of the model's own - a tool response, or an assistant message - the
+     * choice goes back to Mistral's default of `"auto"`, so the model can use
+     * another tool or write the answer, whichever the conversation needs.
+     *
+     * Previously the guard looked for a `tool` role only. Callers that replay
+     * the transcript as text rather than as native tool messages - which is
+     * what an agent loop does when it has to store a conversation between
+     * requests, or normalise it across providers - therefore never satisfied
+     * it, so every turn was forced, and the model called tools until the caller
+     * gave up rather than ever concluding.
+     *
+     * The trade-off: a conversation that already has an assistant turn and
+     * then declares tools for the first time is not forced on the turn where
+     * the tools appear, so the model may describe a call in prose there. An
+     * agent loop that declares its tools from the start is unaffected.
+     *
+     * A `tool_choice` passed by the caller through the model config's custom
+     * options is left alone: the caller has said what it wants.
      *
      * @since 1.0.0
      *
@@ -103,24 +125,23 @@ class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleText
     {
         $params = parent::prepareGenerateTextParams($prompt);
 
-        if (isset($params['tools']) && !empty($params['tools'])) {
-            // Do not force tool use when the conversation already contains a
-            // tool response — in that follow-up turn the model should
-            // summarise the function result as text.
-            $messages = $params['messages'] ?? [];
-            $hasFunctionResponse = false;
-            if (is_array($messages)) {
-                foreach ($messages as $message) {
-                    if (is_array($message) && isset($message['role']) && 'tool' === $message['role']) {
-                        $hasFunctionResponse = true;
-                        break;
-                    }
-                }
-            }
+        if (isset($params['tool_choice']) || empty($params['tools'])) {
+            return $params;
+        }
 
-            if (!$hasFunctionResponse) {
-                $params['tool_choice'] = 'any';
+        $messages = is_array($params['messages'] ?? null) ? $params['messages'] : [];
+
+        $hasModelTurn = false;
+        foreach ($messages as $message) {
+            $role = is_array($message) ? ($message['role'] ?? '') : '';
+            if ('tool' === $role || 'assistant' === $role) {
+                $hasModelTurn = true;
+                break;
             }
+        }
+
+        if (!$hasModelTurn) {
+            $params['tool_choice'] = 'any';
         }
 
         return $params;
