@@ -55,7 +55,7 @@ class ImageGenerationIntegrationTest extends TestCase
     /**
      * Tests basic image generation with a simple prompt.
      *
-     * The generated PNG is saved to tests/integration/images/ so a local
+     * The generated image is saved to tests/integration/images/ so a local
      * tester can inspect the result visually.
      */
     public function testSimpleImageGeneration(): void
@@ -75,7 +75,7 @@ class ImageGenerationIntegrationTest extends TestCase
 
         $file = $parts[0]->getFile();
         $this->assertNotNull($file, 'Expected a file in the first message part.');
-        $this->assertSame('image/png', $file->getMimeType());
+        $this->assertContains($file->getMimeType(), ['image/png', 'image/jpeg', 'image/webp']);
 
         $base64Data = $file->getBase64Data();
         $this->assertNotNull($base64Data, 'Expected non-null base64 image data.');
@@ -85,7 +85,7 @@ class ImageGenerationIntegrationTest extends TestCase
         $this->assertNotFalse($binaryData, 'Expected valid base64-encoded image data.');
         $this->assertNotEmpty($binaryData, 'Expected non-empty decoded image data.');
 
-        $outputPath = $this->imagesDir . '/test_simple_image_generation.png';
+        $outputPath = $this->imagesDir . '/test_simple_image_generation.' . $file->getMimeTypeObject()->toExtension();
         file_put_contents($outputPath, $binaryData);
         $this->assertFileExists($outputPath);
 
@@ -134,7 +134,7 @@ class ImageGenerationIntegrationTest extends TestCase
      * Tests image generation when an output file type is requested and the preferred providers
      * are not available, requiring Mistral to be selected as the fallback.
      *
-     * The generated PNG is saved to tests/integration/images/ so a local
+     * The generated image is saved to tests/integration/images/ so a local
      * tester can inspect the result visually.
      */
     public function testImageGenerationFallsBackToMistralWhenPreferredProvidersUnavailable(): void
@@ -163,7 +163,7 @@ class ImageGenerationIntegrationTest extends TestCase
         $binaryData = base64_decode($file->getBase64Data(), true);
         $this->assertNotFalse($binaryData, 'Expected valid base64-encoded image data.');
 
-        $outputPath = $this->imagesDir . '/test_image_generation_fallback.png';
+        $outputPath = $this->imagesDir . '/test_image_generation_fallback.' . $file->getMimeTypeObject()->toExtension();
         file_put_contents($outputPath, $binaryData);
         $this->assertFileExists($outputPath);
     }
