@@ -73,6 +73,12 @@ add_filter(
 
 == Changelog ==
 
+= n.e.x.t =
+* Fix image generation failing with "Missing the "file_id" key". Mistral now returns generated images as a URL instead of a file ID; both formats are supported.
+* Detect the image type from the downloaded data, as Mistral now returns JPEG images.
+* Instruct the image generation agent to always generate an image instead of sometimes replying with a follow-up question.
+* Include the agent's reply in the error message when no image is returned.
+
 = 1.2.0 =
 * Default sort now surfaces flagship Mistral models (Large, Medium, Magistral, Codestral, …) first and sinks legacy open-weights and non-chat models to the bottom.
 * New `ai_provider_for_mistral_model_sort_callback` filter lets integrators replace the sort comparator.
