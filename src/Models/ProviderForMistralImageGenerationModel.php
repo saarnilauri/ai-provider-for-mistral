@@ -71,7 +71,7 @@ class ProviderForMistralImageGenerationModel extends AbstractApiBasedModel imple
      * whether it should generate the image) instead of calling the tool. The tool call
      * cannot be forced with `tool_choice`, as Mistral rejects `required` for built-in tools.
      *
-     * @since n.e.x.t
+     * @since 1.2.1
      *
      * @var string
      */
@@ -285,7 +285,7 @@ class ProviderForMistralImageGenerationModel extends AbstractApiBasedModel imple
      * their `file_id` values.
      *
      * @since 0.4.0
-     * @since n.e.x.t Returns an empty list instead of throwing when no file IDs are found.
+     * @since 1.2.1 Returns an empty list instead of throwing when no file IDs are found.
      *
      * @param Response $response The Conversations API response.
      * @return list<string> The file IDs of the generated images.
@@ -329,7 +329,7 @@ class ProviderForMistralImageGenerationModel extends AbstractApiBasedModel imple
      * Scans `tool.execution` entries of the `image_generation` tool, whose
      * `info.result` is a JSON string such as `{"url": "https://..."}`.
      *
-     * @since n.e.x.t
+     * @since 1.2.1
      *
      * @param Response $response The Conversations API response.
      * @return list<string> The URLs of the generated images.
@@ -373,7 +373,7 @@ class ProviderForMistralImageGenerationModel extends AbstractApiBasedModel imple
      *
      * Includes the agent's text reply, which usually explains why no image was generated.
      *
-     * @since n.e.x.t
+     * @since 1.2.1
      *
      * @param Response $response The Conversations API response.
      * @return string The error message.
@@ -420,7 +420,7 @@ class ProviderForMistralImageGenerationModel extends AbstractApiBasedModel imple
      * {@see File} object.
      *
      * @since 0.4.0
-     * @since n.e.x.t Takes the image source instead of the file ID, and detects the MIME type.
+     * @since 1.2.1 Takes the image source instead of the file ID, and detects the MIME type.
      *
      * @param Response $imageResponse The response from the image download.
      * @param string   $source        The image source (used in error messages).
@@ -453,7 +453,7 @@ class ProviderForMistralImageGenerationModel extends AbstractApiBasedModel imple
      * The image bytes are checked first, as both download sources may answer with
      * `application/octet-stream`. Falls back to an `image/*` Content-Type header, then to PNG.
      *
-     * @since n.e.x.t
+     * @since 1.2.1
      *
      * @param Response $imageResponse The response from the image download.
      * @param string   $binaryData    The raw image data.

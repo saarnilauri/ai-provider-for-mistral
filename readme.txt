@@ -3,7 +3,7 @@ Contributors: laurisaarni
 Tags: ai, mistral, artificial-intelligence, connector
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -73,7 +73,7 @@ add_filter(
 
 == Changelog ==
 
-= n.e.x.t =
+= 1.2.1 =
 * Fix image generation failing with "Missing the "file_id" key". Mistral now returns generated images as a URL instead of a file ID; both formats are supported.
 * Detect the image type from the downloaded data, as Mistral now returns JPEG images.
 * Instruct the image generation agent to always generate an image instead of sometimes replying with a follow-up question.
