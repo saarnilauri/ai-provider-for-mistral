@@ -129,6 +129,35 @@ class ProviderForMistralImageGenerationModelTest extends TestCase
     }
 
     /**
+     * Returns a JSON-encoded conversation response in the shape the live API currently returns.
+     *
+     * The image is referenced by a signed URL in the `image_generation` tool execution
+     * entry, and the message content is a plain markdown string without `tool_file` chunks.
+     *
+     * @param string $imageUrl
+     * @return string
+     */
+    private function buildUrlConversationResponseBody(
+        string $imageUrl = 'https://example.blob.core.windows.net/images/image.jpg?sig=abc'
+    ): string {
+        return (string) json_encode([
+            'conversation_id' => 'conv_url123',
+            'outputs'         => [
+                [
+                    'type'      => 'tool.execution',
+                    'name'      => 'image_generation',
+                    'arguments' => '{"prompt": "A red apple."}',
+                    'info'      => ['result' => (string) json_encode(['url' => $imageUrl])],
+                ],
+                [
+                    'type'    => 'message.output',
+                    'content' => 'Here is your image:\n\n![Red apple](' . $imageUrl . ')',
+                ],
+            ],
+        ]);
+    }
+
+    /**
      * Returns a JSON-encoded agent creation response.
      *
      * @param string $agentId
@@ -388,7 +417,7 @@ class ProviderForMistralImageGenerationModelTest extends TestCase
                 [
                     'type'    => 'message.output',
                     'content' => [
-                        ['type' => 'text', 'text' => 'No image was generated.'],
+                        ['type' => 'text', 'text' => 'Would you like me to generate it?'],
                     ],
                 ],
             ],
@@ -407,7 +436,9 @@ class ProviderForMistralImageGenerationModelTest extends TestCase
         $model = $this->createModel($config);
 
         $this->expectException(ResponseException::class);
-        $this->expectExceptionMessage('"file_id"');
+        $this->expectExceptionMessage(
+            'does not contain a generated image. The agent replied: Would you like me to generate it?'
+        );
         $model->generateImageResult($this->createPrompt());
     }
 
@@ -595,6 +626,83 @@ class ProviderForMistralImageGenerationModelTest extends TestCase
     }
 
     /**
+     * Tests that a prompt shaped like the WordPress AI plugin's, with the site guidelines
+     * appended to the user prompt, is sent to the conversation as-is.
+     */
+    public function testGenerateImageResultSendsAiPluginPromptWithGuidelinesUnchanged(): void
+    {
+        $prompt = "A cosy wooden cabin by a frozen lake at dusk\n\n"
+            . 'The following guidelines represent the site&#039;s editorial standards. '
+            . 'Apply them where relevant. If guidelines conflict with the above input, prioritize accuracy.'
+            . "\n\n<guidelines>\n<image-guidelines>Use natural light.</image-guidelines>\n</guidelines>";
+
+        $capturedRequests = [];
+        $config = new ModelConfig();
+        $config->setCustomOption(ProviderForMistralImageGenerationModel::CUSTOM_OPTION_AGENT_ID, 'agent_provided');
+
+        $this->mockRequestAuthentication
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        $this->mockHttpTransporter
+            ->method('send')
+            ->willReturnCallback(function ($request) use (&$capturedRequests) {
+                $capturedRequests[] = $request;
+                if (count($capturedRequests) === 1) {
+                    return new Response(200, [], $this->buildConversationResponseBody());
+                }
+                return new Response(200, [], 'fake-png');
+            });
+
+        $model = $this->createModel($config);
+        $model->generateImageResult($this->createPrompt($prompt));
+
+        $data = $capturedRequests[0]->getData();
+        $this->assertIsArray($data);
+        $this->assertSame($prompt, $data['inputs']);
+    }
+
+    /**
+     * Tests the WordPress AI plugin's refine flow message shape: a user message with a text
+     * part and a reference image part. Only the text is sent to the conversation.
+     */
+    public function testGenerateImageResultWithReferenceImageSendsOnlyText(): void
+    {
+        $capturedRequests = [];
+        $config = new ModelConfig();
+        $config->setCustomOption(ProviderForMistralImageGenerationModel::CUSTOM_OPTION_AGENT_ID, 'agent_provided');
+
+        $this->mockRequestAuthentication
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        $this->mockHttpTransporter
+            ->method('send')
+            ->willReturnCallback(function ($request) use (&$capturedRequests) {
+                $capturedRequests[] = $request;
+                if (count($capturedRequests) === 1) {
+                    return new Response(200, [], $this->buildConversationResponseBody());
+                }
+                return new Response(200, [], 'fake-png');
+            });
+
+        $referenceImage = new File(base64_encode('fake-reference-png'), 'image/png');
+        $prompt = [
+            new Message(
+                MessageRoleEnum::user(),
+                [new MessagePart('Make the sky more orange'), new MessagePart($referenceImage)]
+            ),
+        ];
+
+        $model = $this->createModel($config);
+        $model->generateImageResult($prompt);
+
+        $data = $capturedRequests[0]->getData();
+        $this->assertIsArray($data);
+        $this->assertSame('Make the sky more orange', $data['inputs']);
+    }
+
+    /**
      * Tests that when no agent_id is set the agent creation request uses the model metadata ID.
      */
     public function testGenerateImageResultAgentCreationUsesMetadataModelId(): void
@@ -630,5 +738,204 @@ class ProviderForMistralImageGenerationModelTest extends TestCase
         $this->assertIsArray($data);
         $this->assertSame('mistral-medium-2505', $data['model']);
         $this->assertSame([['type' => 'image_generation']], $data['tools']);
+        $this->assertSame(ProviderForMistralImageGenerationModel::AGENT_INSTRUCTIONS, $data['instructions']);
+    }
+
+    /**
+     * Tests generateImageResult() with the URL-based response shape the live API currently returns.
+     * Expects the image to be downloaded from the URL without authentication, and the MIME type
+     * to be detected from the JPEG bytes even though the storage host sends application/octet-stream.
+     */
+    public function testGenerateImageResultDownloadsImageFromToolExecutionUrl(): void
+    {
+        $imageUrl = 'https://example.blob.core.windows.net/images/image.jpg?sig=abc';
+        $imageBinary = "\xFF\xD8\xFF\xE0fake-jpeg-data";
+        $capturedRequests = [];
+        $config = new ModelConfig();
+        $config->setCustomOption(ProviderForMistralImageGenerationModel::CUSTOM_OPTION_AGENT_ID, 'agent_xyz');
+
+        // Only the conversation request is authenticated.
+        $this->mockRequestAuthentication
+            ->expects($this->once())
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        $this->mockHttpTransporter
+            ->expects($this->exactly(2))
+            ->method('send')
+            ->willReturnCallback(function ($request) use (&$capturedRequests, $imageUrl, $imageBinary) {
+                $capturedRequests[] = $request;
+                if (count($capturedRequests) === 1) {
+                    return new Response(200, [], $this->buildUrlConversationResponseBody($imageUrl));
+                }
+                return new Response(200, ['Content-Type' => ['application/octet-stream']], $imageBinary);
+            });
+
+        $model = $this->createModel($config);
+        $result = $model->generateImageResult($this->createPrompt());
+
+        $this->assertSame($imageUrl, $capturedRequests[1]->getUri());
+        $this->assertSame('conv_url123', $result->getId());
+        $this->assertCount(1, $result->getCandidates());
+
+        $file = $result->getCandidates()[0]->getMessage()->getParts()[0]->getFile();
+        $this->assertInstanceOf(File::class, $file);
+        $this->assertSame('image/jpeg', $file->getMimeType());
+        $this->assertSame(base64_encode($imageBinary), $file->getBase64Data());
+    }
+
+    /**
+     * Tests that tool_file chunks take precedence over tool execution URLs when both are present.
+     */
+    public function testGenerateImageResultPrefersFileIdOverUrl(): void
+    {
+        $capturedRequests = [];
+        $config = new ModelConfig();
+        $config->setCustomOption(ProviderForMistralImageGenerationModel::CUSTOM_OPTION_AGENT_ID, 'agent_xyz');
+
+        $responseBody = (string) json_encode([
+            'conversation_id' => 'conv_both',
+            'outputs'         => [
+                [
+                    'type' => 'tool.execution',
+                    'name' => 'image_generation',
+                    'info' => ['result' => '{"url": "https://example.com/image.jpg"}'],
+                ],
+                [
+                    'type'    => 'message.output',
+                    'content' => [['type' => 'tool_file', 'file_id' => 'file_img001']],
+                ],
+            ],
+        ]);
+
+        $this->mockRequestAuthentication
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        $this->mockHttpTransporter
+            ->expects($this->exactly(2))
+            ->method('send')
+            ->willReturnCallback(function ($request) use (&$capturedRequests, $responseBody) {
+                $capturedRequests[] = $request;
+                if (count($capturedRequests) === 1) {
+                    return new Response(200, [], $responseBody);
+                }
+                return new Response(200, [], "\x89PNG\r\n\x1a\nfake-png");
+            });
+
+        $model = $this->createModel($config);
+        $result = $model->generateImageResult($this->createPrompt());
+
+        $this->assertStringEndsWith('/files/file_img001/content', $capturedRequests[1]->getUri());
+        $file = $result->getCandidates()[0]->getMessage()->getParts()[0]->getFile();
+        $this->assertInstanceOf(File::class, $file);
+        $this->assertSame('image/png', $file->getMimeType());
+    }
+
+    /**
+     * Tests that tool execution URLs that are not HTTPS, or belong to another tool, are ignored.
+     */
+    public function testGenerateImageResultIgnoresInvalidToolExecutionUrls(): void
+    {
+        $config = new ModelConfig();
+        $config->setCustomOption(ProviderForMistralImageGenerationModel::CUSTOM_OPTION_AGENT_ID, 'agent_xyz');
+
+        $responseBody = (string) json_encode([
+            'conversation_id' => 'conv_invalid',
+            'outputs'         => [
+                [
+                    'type' => 'tool.execution',
+                    'name' => 'image_generation',
+                    'info' => ['result' => '{"url": "http://example.com/image.jpg"}'],
+                ],
+                [
+                    'type' => 'tool.execution',
+                    'name' => 'web_search',
+                    'info' => ['result' => '{"url": "https://example.com/page"}'],
+                ],
+                [
+                    'type' => 'tool.execution',
+                    'name' => 'image_generation',
+                    'info' => ['result' => 'not json'],
+                ],
+            ],
+        ]);
+
+        $this->mockRequestAuthentication
+            ->expects($this->once())
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        $this->mockHttpTransporter
+            ->expects($this->once())
+            ->method('send')
+            ->willReturn(new Response(200, [], $responseBody));
+
+        $model = $this->createModel($config);
+
+        $this->expectException(ResponseException::class);
+        $this->expectExceptionMessage('does not contain a generated image.');
+        $model->generateImageResult($this->createPrompt());
+    }
+
+    /**
+     * Tests the error message when the agent replies with a plain string instead of calling the tool.
+     */
+    public function testGenerateImageResultNoImageWithStringContentIncludesAgentReply(): void
+    {
+        $config = new ModelConfig();
+        $config->setCustomOption(ProviderForMistralImageGenerationModel::CUSTOM_OPTION_AGENT_ID, 'agent_xyz');
+
+        $responseBody = (string) json_encode([
+            'conversation_id' => 'conv_text',
+            'outputs'         => [
+                [
+                    'type'    => 'message.output',
+                    'content' => 'If you\'d like, I can generate an image of a blue cup for you.',
+                ],
+            ],
+        ]);
+
+        $this->mockRequestAuthentication
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        $this->mockHttpTransporter
+            ->expects($this->once())
+            ->method('send')
+            ->willReturn(new Response(200, [], $responseBody));
+
+        $model = $this->createModel($config);
+
+        $this->expectException(ResponseException::class);
+        $this->expectExceptionMessage('The agent replied: If you\'d like, I can generate an image of a blue cup');
+        $model->generateImageResult($this->createPrompt());
+    }
+
+    /**
+     * Tests that the MIME type falls back to an image Content-Type header for unknown image bytes.
+     */
+    public function testGenerateImageResultUsesImageContentTypeForUnknownBytes(): void
+    {
+        $config = new ModelConfig();
+        $config->setCustomOption(ProviderForMistralImageGenerationModel::CUSTOM_OPTION_AGENT_ID, 'agent_xyz');
+
+        $this->mockRequestAuthentication
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        $this->mockHttpTransporter
+            ->method('send')
+            ->willReturnOnConsecutiveCalls(
+                new Response(200, [], $this->buildUrlConversationResponseBody()),
+                new Response(200, ['Content-Type' => ['image/gif; charset=binary']], 'GIF89a-fake')
+            );
+
+        $model = $this->createModel($config);
+        $result = $model->generateImageResult($this->createPrompt());
+
+        $file = $result->getCandidates()[0]->getMessage()->getParts()[0]->getFile();
+        $this->assertInstanceOf(File::class, $file);
+        $this->assertSame('image/gif', $file->getMimeType());
     }
 }
