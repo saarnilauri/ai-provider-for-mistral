@@ -7,6 +7,7 @@ namespace SaarniLauri\AiProviderForMistral\Provider;
 use SaarniLauri\AiProviderForMistral\Metadata\ProviderForMistralModelMetadataDirectory;
 use SaarniLauri\AiProviderForMistral\Models\ProviderForMistralImageGenerationModel;
 use SaarniLauri\AiProviderForMistral\Models\ProviderForMistralTextGenerationModel;
+use SaarniLauri\AiProviderForMistral\Models\ProviderForMistralTextToSpeechConversionModel;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Common\Exception\RuntimeException;
 use WordPress\AiClient\Providers\ApiBasedImplementation\AbstractApiProvider;
@@ -52,6 +53,11 @@ class ProviderForMistral extends AbstractApiProvider
             }
         }
         foreach ($capabilities as $capability) {
+            if ($capability->isTextToSpeechConversion()) {
+                return new ProviderForMistralTextToSpeechConversionModel($modelMetadata, $providerMetadata);
+            }
+        }
+        foreach ($capabilities as $capability) {
             if ($capability->isTextGeneration()) {
                 return new ProviderForMistralTextGenerationModel($modelMetadata, $providerMetadata);
             }
@@ -82,9 +88,9 @@ class ProviderForMistral extends AbstractApiProvider
             // For WordPress, we should translate the description.
             if (function_exists('__')) {
                 // phpcs:ignore Generic.Files.LineLength.TooLong
-                $providerMetadataArgs[] = __('Text and image generation with Mistral AI models.', 'ai-provider-for-mistral');
+                $providerMetadataArgs[] = __('Text, image, and speech generation with Mistral AI models.', 'ai-provider-for-mistral');
             } else {
-                $providerMetadataArgs[] = 'Text and image generation with Mistral AI models.';
+                $providerMetadataArgs[] = 'Text, image, and speech generation with Mistral AI models.';
             }
         }
         // Provider logoPath support was added in 1.3.0.
