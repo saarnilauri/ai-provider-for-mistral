@@ -242,6 +242,96 @@ class ProviderForMistralModelMetadataDirectoryTest extends TestCase
     }
 
     /**
+     * Tests that models flagged with `audio_speech` are registered as text-to-speech models.
+     */
+    public function testTextToSpeechModelsAreDetectedFromAudioSpeechFlag(): void
+    {
+        $response = new Response(
+            200,
+            [],
+            (string) json_encode([
+                'data' => [
+                    [
+                        'id' => 'voxtral-mini-tts-3-0',
+                        'capabilities' => ['completion_chat' => false, 'audio_speech' => true],
+                    ],
+                    [
+                        'id' => 'voxtral-mini-transcribe-3-0',
+                        'capabilities' => ['completion_chat' => false, 'audio_speech' => false],
+                    ],
+                ],
+            ])
+        );
+
+        $directory = new MockProviderForMistralModelMetadataDirectory();
+        $models = $directory->exposeParseResponseToModelMetadataList($response);
+
+        $this->assertSame('voxtral-mini-tts-3-0', $models[0]->getId());
+        $this->assertEquals(
+            [CapabilityEnum::textToSpeechConversion(), CapabilityEnum::speechGeneration()],
+            $models[0]->getSupportedCapabilities()
+        );
+
+        $inputModalitiesOption = $this->findOption($models[0], OptionEnum::inputModalities());
+        $this->assertNotNull($inputModalitiesOption);
+        $this->assertTrue(
+            $this->supportedModalitiesInclude($inputModalitiesOption->getSupportedValues() ?? [], ['text', 'audio'])
+        );
+
+        $outputModalitiesOption = $this->findOption($models[0], OptionEnum::outputModalities());
+        $this->assertNotNull($outputModalitiesOption);
+        $this->assertSame([[ModalityEnum::audio()]], $outputModalitiesOption->getSupportedValues());
+
+        $voiceOption = $this->findOption($models[0], OptionEnum::outputSpeechVoice());
+        $this->assertNotNull($voiceOption);
+        $this->assertTrue($voiceOption->isSupportedValue('any-saved-voice-id'));
+
+        $this->assertNotNull($this->findOption($models[0], OptionEnum::outputMimeType()));
+        $this->assertNull($this->findOption($models[0], OptionEnum::functionDeclarations()));
+
+        $this->assertSame('voxtral-mini-transcribe-3-0', $models[1]->getId());
+        $this->assertSame([], $models[1]->getSupportedCapabilities());
+    }
+
+    /**
+     * Tests that text-to-speech models sort after the Voxtral chat models, with Voxtral TTS 3 first.
+     */
+    public function testTextToSpeechModelsSortAfterVoxtralChatModels(): void
+    {
+        $response = new Response(
+            200,
+            [],
+            (string) json_encode([
+                'data' => [
+                    ['id' => 'voxtral-mini-tts-latest', 'capabilities' => ['audio_speech' => true]],
+                    ['id' => 'voxtral-mini-tts-3-0', 'capabilities' => ['audio_speech' => true]],
+                    ['id' => 'voxtral-small-latest', 'capabilities' => ['completion_chat' => true]],
+                    ['id' => 'voxtral-mini-tts-2603', 'capabilities' => ['audio_speech' => true]],
+                    ['id' => 'voxtral-mini-tts-3', 'capabilities' => ['audio_speech' => true]],
+                    ['id' => 'mistral-embed', 'capabilities' => ['completion_chat' => false]],
+                    ['id' => 'mistral-ocr-latest', 'capabilities' => ['completion_chat' => true]],
+                ],
+            ])
+        );
+
+        $directory = new MockProviderForMistralModelMetadataDirectory();
+        $models = $directory->exposeParseResponseToModelMetadataList($response);
+
+        $this->assertSame(
+            [
+                'voxtral-small-latest',
+                'voxtral-mini-tts-3',
+                'voxtral-mini-tts-3-0',
+                'voxtral-mini-tts-latest',
+                'voxtral-mini-tts-2603',
+                'mistral-ocr-latest',
+                'mistral-embed',
+            ],
+            array_map(static fn (ModelMetadata $m): string => $m->getId(), $models)
+        );
+    }
+
+    /**
      * Tests that subclasses can override the sort callback, proving the comparator is dispatched rather than inlined.
      *
      * The public WordPress filter `ai_provider_for_mistral_model_sort_callback` is only available when WordPress is

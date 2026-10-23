@@ -42,8 +42,10 @@ function load_classes(): void
     $plugin_dir = __DIR__ . '/src';
 
     require_once $plugin_dir . '/Metadata/ProviderForMistralModelMetadataDirectory.php';
+    require_once $plugin_dir . '/Text/TextChunker.php';
     require_once $plugin_dir . '/Models/ProviderForMistralTextGenerationModel.php';
     require_once $plugin_dir . '/Models/ProviderForMistralImageGenerationModel.php';
+    require_once $plugin_dir . '/Models/ProviderForMistralTextToSpeechConversionModel.php';
     require_once $plugin_dir . '/Provider/ProviderForMistral.php';
 }
 

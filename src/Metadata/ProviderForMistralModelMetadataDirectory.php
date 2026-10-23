@@ -24,7 +24,8 @@ use WordPress\AiClient\Providers\OpenAiCompatibleImplementation\AbstractOpenAiCo
  * @phpstan-type ModelCapabilities array{
  *     completion_chat?: bool,
  *     function_calling?: bool,
- *     vision?: bool
+ *     vision?: bool,
+ *     audio_speech?: bool
  * }
  * @phpstan-type ModelData array{
  *     id: string,
@@ -185,18 +186,51 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
             new SupportedOption(OptionEnum::outputModalities(), [[ModalityEnum::text()]]),
         ]);
 
+        $speechOptions = [
+            new SupportedOption(
+                OptionEnum::inputModalities(),
+                [
+                    [ModalityEnum::text()],
+                    [ModalityEnum::text(), ModalityEnum::audio()],
+                ]
+            ),
+            new SupportedOption(OptionEnum::outputModalities(), [[ModalityEnum::audio()]]),
+            new SupportedOption(OptionEnum::outputSpeechVoice()),
+            new SupportedOption(
+                OptionEnum::outputMimeType(),
+                ['audio/mpeg', 'audio/wav', 'audio/flac', 'audio/ogg', 'audio/pcm']
+            ),
+            new SupportedOption(OptionEnum::outputFileType()),
+            new SupportedOption(OptionEnum::customOptions()),
+        ];
+
         /** @var list<ModelData> $modelsData */
         $models = array_values(
             array_map(
                 static function (array $modelData) use (
                     $textOnlyOptions,
                     $visionOptions,
-                    $audioOptions
+                    $audioOptions,
+                    $speechOptions
                 ): ModelMetadata {
                     $modelId = $modelData['id'];
                     $modelName = $modelData['name'] ?? $modelId;
 
                     $capabilityData = $modelData['capabilities'] ?? [];
+
+                    // Text-to-speech models (Voxtral TTS) are flagged with `audio_speech` and do not support chat.
+                    if ($capabilityData['audio_speech'] ?? false) {
+                        return new ModelMetadata(
+                            $modelId,
+                            $modelName,
+                            [
+                                CapabilityEnum::textToSpeechConversion(),
+                                CapabilityEnum::speechGeneration(),
+                            ],
+                            $speechOptions
+                        );
+                    }
+
                     $supportsChat = $capabilityData['completion_chat'] ?? false;
                     $supportsFunctionCalling = $capabilityData['function_calling'] ?? false;
                     $supportsVision = $capabilityData['vision'] ?? false;
@@ -376,6 +410,14 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
             return 70;
         }
         if (str_starts_with($id, 'voxtral-')) {
+            // Text-to-speech models after the Voxtral chat models. Voxtral TTS 3 comes first, as the
+            // `voxtral-mini-tts-latest` alias still points to Voxtral TTS 2.
+            if (preg_match('/-tts-3(-|$)/', $id) === 1) {
+                return 84;
+            }
+            if (str_contains($id, '-tts')) {
+                return 85;
+            }
             return 80;
         }
         if (str_starts_with($id, 'mistral-ocr') || str_starts_with($id, 'mistral-saba')) {

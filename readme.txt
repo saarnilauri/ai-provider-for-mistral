@@ -19,6 +19,7 @@ It is not affiliated with, endorsed by, or sponsored by Mistral AI.
 
 * Text generation with Mistral models
 * Image generation with Mistral mistral-medium-2505 model
+* Text-to-speech with Mistral Voxtral TTS models, including voice cloning from a reference recording
 * Function calling support (for compatible models)
 * Vision input support (for compatible models)
 * Automatic provider registration
@@ -71,7 +72,21 @@ add_filter(
 );
 `
 
+**`ai_provider_for_mistral_default_voice_id`**
+
+Filters the voice used for text-to-speech when no voice is set with `asOutputSpeechVoice()`. Defaults to the English preset voice `voice_478` for Voxtral TTS 3 models and `gb_jane_neutral` for older models. The model ID is passed as the second argument.
+
+**`ai_provider_for_mistral_tts_max_text_length`**
+
+Filters the maximum number of characters narrated in a single text-to-speech request (default 2000). Longer text is split at paragraph and sentence boundaries and the audio joined into one file, which requires the MP3 or PCM format. The model ID is passed as the second argument.
+
 == Changelog ==
+
+= n.e.x.t =
+* Add text-to-speech with the Mistral Voxtral TTS models, such as Voxtral TTS 3 (`voxtral-mini-tts-3-0`). Use `convertTextToSpeech()` or `generateSpeech()`, choose a voice with `asOutputSpeechVoice()` and a format with `asOutputMimeType()` (MP3, WAV, FLAC, Opus, or PCM).
+* Clone a voice for a single request by adding a short audio recording to the prompt.
+* Narrate long text in several requests and join the audio into one file.
+* New `ai_provider_for_mistral_default_voice_id` and `ai_provider_for_mistral_tts_max_text_length` filters.
 
 = 1.2.1 =
 * Fix image generation failing with "Missing the "file_id" key". Mistral now returns generated images as a URL instead of a file ID; both formats are supported.
@@ -130,7 +145,7 @@ Improve package / plugin distribution
 
 == External services ==
 
-This plugin connects to the Mistral AI API (https://api.mistral.ai/v1) to provide AI text generation and image generation capabilities.
+This plugin connects to the Mistral AI API (https://api.mistral.ai/v1) to provide AI text generation, image generation, and text-to-speech capabilities.
 
 Data is sent to the Mistral API when your application code makes AI generation requests through the PHP AI Client. The data sent includes your prompts, model configuration, and API key. No data is sent automatically — requests only occur when explicitly triggered by code using the PHP AI Client SDK.
 
