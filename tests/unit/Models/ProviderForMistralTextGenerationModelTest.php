@@ -20,6 +20,9 @@ use WordPress\AiClient\Providers\Models\DTO\ModelConfig;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
 use WordPress\AiClient\Results\DTO\GenerativeAiResult;
 use WordPress\AiClient\Results\Enums\FinishReasonEnum;
+use WordPress\AiClient\Tools\DTO\FunctionCall;
+use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
+use WordPress\AiClient\Tools\DTO\FunctionResponse;
 
 /**
  * @covers \SaarniLauri\AiProviderForMistral\Models\ProviderForMistralTextGenerationModel
@@ -280,6 +283,95 @@ class ProviderForMistralTextGenerationModelTest extends TestCase
         $this->expectExceptionMessage('Mistral chat requires document files to be provided as a URL.');
 
         $model->exposeGetMessagePartContentData($part);
+    }
+
+    /**
+     * Tests that tool use is forced on the opening turn, so that the model calls a tool
+     * instead of describing a call in prose.
+     */
+    public function testToolChoiceIsForcedOnTheOpeningTurn(): void
+    {
+        $model = $this->createModel($this->configWithTools());
+        $params = $model->exposePrepareGenerateTextParams(
+            [new Message(MessageRoleEnum::user(), [new MessagePart('What is the weather in Helsinki?')])]
+        );
+
+        $this->assertSame('any', $params['tool_choice'] ?? null);
+    }
+
+    /**
+     * Tests that tool use is not forced once the model has taken a turn of its own.
+     *
+     * Without this the model can never answer: "any" obliges it to call something on
+     * every request, so a conversation that replays previous turns as text - as an agent
+     * loop that stores its transcript does - calls tools until the caller gives up.
+     */
+    public function testToolChoiceIsNotForcedAfterAnAssistantTurn(): void
+    {
+        $model = $this->createModel($this->configWithTools());
+        $params = $model->exposePrepareGenerateTextParams([
+            new Message(MessageRoleEnum::user(), [new MessagePart('What is the weather in Helsinki?')]),
+            new Message(MessageRoleEnum::model(), [new MessagePart('[calling get_weather with {"city":"Helsinki"}]')]),
+            new Message(MessageRoleEnum::user(), [new MessagePart('[result of get_weather] 21C and sunny')]),
+        ]);
+
+        $this->assertArrayNotHasKey('tool_choice', $params);
+    }
+
+    /**
+     * Tests that tool use is not forced after a native tool response either.
+     */
+    public function testToolChoiceIsNotForcedAfterAToolResponse(): void
+    {
+        $model = $this->createModel($this->configWithTools());
+        $params = $model->exposePrepareGenerateTextParams([
+            new Message(MessageRoleEnum::user(), [new MessagePart('What is the weather in Helsinki?')]),
+            new Message(MessageRoleEnum::model(), [
+                new MessagePart(new FunctionCall('call_1', 'get_weather', ['city' => 'Helsinki'])),
+            ]),
+            new Message(MessageRoleEnum::user(), [
+                new MessagePart(new FunctionResponse('call_1', 'get_weather', ['temperature' => 21])),
+            ]),
+        ]);
+
+        $this->assertArrayNotHasKey('tool_choice', $params);
+    }
+
+    /**
+     * Tests that a tool_choice the caller asked for is left alone.
+     */
+    public function testCallerSuppliedToolChoiceIsKept(): void
+    {
+        $config = $this->configWithTools();
+        $config->setCustomOptions(['tool_choice' => 'none']);
+
+        $model = $this->createModel($config);
+        $params = $model->exposePrepareGenerateTextParams(
+            [new Message(MessageRoleEnum::user(), [new MessagePart('Just say hello.')])]
+        );
+
+        $this->assertSame('none', $params['tool_choice'] ?? null);
+    }
+
+    /**
+     * A model config declaring one tool.
+     */
+    private function configWithTools(): ModelConfig
+    {
+        $config = new ModelConfig();
+        $config->setFunctionDeclarations([
+            new FunctionDeclaration(
+                'get_weather',
+                'Returns the current weather for a city.',
+                [
+                    'type' => 'object',
+                    'properties' => ['city' => ['type' => 'string']],
+                    'required' => ['city'],
+                ]
+            ),
+        ]);
+
+        return $config;
     }
 
     /**
