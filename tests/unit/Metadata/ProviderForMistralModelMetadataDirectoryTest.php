@@ -367,9 +367,9 @@ class ProviderForMistralModelMetadataDirectoryTest extends TestCase
             [
                 'voxtral-small-latest',
                 'voxtral-mini-tts-latest',
-                'voxtral-mini-tts-2603',
                 'voxtral-mini-tts-3',
                 'voxtral-mini-tts-3-0',
+                'voxtral-mini-tts-2603',
                 'mistral-ocr-latest',
                 'mistral-embed',
             ],
