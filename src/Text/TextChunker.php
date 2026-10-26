@@ -23,14 +23,14 @@ use WordPress\AiClient\Common\Exception\InvalidArgumentException;
  * Adapted from the AI Provider for ElevenLabs, where it was contributed by
  * Jake Spurlock (https://github.com/whyisjake/ai-provider-for-elevenlabs).
  *
- * @since n.e.x.t
+ * @since 1.3.0
  */
 final class TextChunker
 {
     /**
      * Splits text into chunks no longer than the limit.
      *
-     * @since n.e.x.t
+     * @since 1.3.0
      *
      * @param string $text  The text to split.
      * @param int    $limit Maximum characters per chunk.
@@ -79,7 +79,7 @@ final class TextChunker
      * boundary, so joining is a plain concatenation. It exists as a named
      * operation so the round trip can be asserted directly.
      *
-     * @since n.e.x.t
+     * @since 1.3.0
      *
      * @param list<string> $chunks The chunks to join.
      * @return string The rejoined text.
@@ -95,7 +95,7 @@ final class TextChunker
      * Works on a window already truncated to the limit, and returns the offset
      * just past the best boundary within it.
      *
-     * @since n.e.x.t
+     * @since 1.3.0
      *
      * @param string $window The candidate chunk, no longer than the limit.
      * @return int The number of characters to take, always at least 1.
@@ -130,7 +130,7 @@ final class TextChunker
     /**
      * Finds the offset just past the last sentence terminator in a window.
      *
-     * @since n.e.x.t
+     * @since 1.3.0
      *
      * @param string $window The candidate chunk.
      * @return int|null The offset just past the terminator, or null if there is none.

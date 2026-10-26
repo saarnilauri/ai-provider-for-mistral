@@ -449,7 +449,7 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
      * Matches up to three 1–2 digit segments separated by `-` or `.`, so `mistral-large-4`, `mistral-large-4-0`
      * and `mistral-medium-3.5` are versioned, while 4-digit YYMM stamps such as `mistral-large-2512` are not.
      *
-     * @since n.e.x.t
+     * @since 1.3.0
      *
      * @param string $id Model id.
      * @return array{int, int, int}|null Major, minor and patch numbers, or null if the id has no version suffix.

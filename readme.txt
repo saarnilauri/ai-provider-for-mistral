@@ -3,7 +3,7 @@ Contributors: laurisaarni
 Tags: ai, mistral, artificial-intelligence, connector
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.2.1
+Stable tag: 1.3.0
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -82,7 +82,7 @@ Filters the maximum number of characters narrated in a single text-to-speech req
 
 == Changelog ==
 
-= n.e.x.t =
+= 1.3.0 =
 * Add text-to-speech with the Mistral Voxtral TTS models, such as Voxtral TTS 3 (`voxtral-mini-tts-3-0`). Use `convertTextToSpeech()` or `generateSpeech()`, choose a voice with `asOutputSpeechVoice()` and a format with `asOutputMimeType()` (MP3, WAV, FLAC, Opus, or PCM).
 * Clone a voice for a single request by adding a short audio recording to the prompt.
 * Narrate long text in several requests and join the audio into one file.
