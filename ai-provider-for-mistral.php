@@ -45,6 +45,15 @@ function load_classes(): void
     require_once $plugin_dir . '/Models/ProviderForMistralTextGenerationModel.php';
     require_once $plugin_dir . '/Models/ProviderForMistralImageGenerationModel.php';
     require_once $plugin_dir . '/Provider/ProviderForMistral.php';
+
+    /*
+     * The embedding model implements an interface that older AI client versions do not
+     * ship, so requiring its file on one of those would be a fatal error. The provider
+     * is loaded ahead of this because the version gate lives on it.
+     */
+    if (ProviderForMistral::supportsEmbeddingGeneration()) {
+        require_once $plugin_dir . '/Models/ProviderForMistralEmbeddingGenerationModel.php';
+    }
 }
 
 /**

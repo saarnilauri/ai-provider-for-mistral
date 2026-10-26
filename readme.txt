@@ -19,6 +19,7 @@ It is not affiliated with, endorsed by, or sponsored by Mistral AI.
 
 * Text generation with Mistral models
 * Image generation with Mistral mistral-medium-2505 model
+* Text embeddings with mistral-embed and codestral-embed (requires PHP AI Client 1.4.0 or newer)
 * Function calling support (for compatible models)
 * Vision input support (for compatible models)
 * Automatic provider registration
