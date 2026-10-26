@@ -410,11 +410,7 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
             return 70;
         }
         if (str_starts_with($id, 'voxtral-')) {
-            // Text-to-speech models after the Voxtral chat models. Voxtral TTS 3 comes first, as the
-            // `voxtral-mini-tts-latest` alias still points to Voxtral TTS 2.
-            if (preg_match('/-tts-3(-|$)/', $id) === 1) {
-                return 84;
-            }
+            // Text-to-speech models after the Voxtral chat models.
             if (str_contains($id, '-tts')) {
                 return 85;
             }

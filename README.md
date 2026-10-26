@@ -150,6 +150,7 @@ file_put_contents('order-update.mp3', base64_decode($file->getBase64Data(), true
 - **Format:** MP3 by default. Request another format with `asOutputMimeType()`: `audio/wav`, `audio/flac`, `audio/ogg` (Opus), or `audio/pcm` (raw 32-bit float samples at 24 kHz).
 - **Voice cloning:** add a short recording to the prompt as an inline audio file, and Mistral narrates the text in that voice for this request only.
 - **Long text:** text over 2000 characters is split at paragraph and sentence boundaries, narrated in several requests, and joined into one file. Joining works for MP3 and PCM only, so other formats throw an exception for long text. Change the limit with the `ai_provider_for_mistral_tts_max_text_length` filter.
+- **Volume on long text:** Voxtral TTS 3 currently gets quieter over longer passages and jumps back up at each new segment, which Mistral has confirmed as a known limitation. For long-form narration, use `voxtral-mini-tts-2603`. When the provider picks the model, it uses `voxtral-mini-tts-latest`, which points to that model for now.
 - **Other options:** pass Mistral parameters such as `expressiveness` or `phoneme_hints` with `usingModelConfig()` custom options. Emotion and pace tags go inline in the text.
 
 ## Supported Models

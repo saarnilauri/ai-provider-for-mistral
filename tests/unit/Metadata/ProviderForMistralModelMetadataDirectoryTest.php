@@ -294,7 +294,7 @@ class ProviderForMistralModelMetadataDirectoryTest extends TestCase
     }
 
     /**
-     * Tests that text-to-speech models sort after the Voxtral chat models, with Voxtral TTS 3 first.
+     * Tests that text-to-speech models sort after the Voxtral chat models, with the `-latest` alias first.
      */
     public function testTextToSpeechModelsSortAfterVoxtralChatModels(): void
     {
@@ -320,10 +320,10 @@ class ProviderForMistralModelMetadataDirectoryTest extends TestCase
         $this->assertSame(
             [
                 'voxtral-small-latest',
-                'voxtral-mini-tts-3',
-                'voxtral-mini-tts-3-0',
                 'voxtral-mini-tts-latest',
                 'voxtral-mini-tts-2603',
+                'voxtral-mini-tts-3',
+                'voxtral-mini-tts-3-0',
                 'mistral-ocr-latest',
                 'mistral-embed',
             ],
