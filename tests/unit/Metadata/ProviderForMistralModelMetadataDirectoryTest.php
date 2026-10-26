@@ -127,6 +127,52 @@ class ProviderForMistralModelMetadataDirectoryTest extends TestCase
     }
 
     /**
+     * Tests that version-numbered ids sort above dated ids in the same family, highest version first.
+     */
+    public function testDefaultSortOrdersVersionNumberedIdsBeforeDatedIds(): void
+    {
+        $response = new Response(
+            200,
+            [],
+            (string) json_encode([
+                'data' => [
+                    ['id' => 'mistral-large-2512', 'capabilities' => ['completion_chat' => true]],
+                    ['id' => 'mistral-large-4', 'capabilities' => ['completion_chat' => true]],
+                    ['id' => 'mistral-large-4-0', 'capabilities' => ['completion_chat' => true]],
+                    ['id' => 'mistral-large-latest', 'capabilities' => ['completion_chat' => true]],
+                    ['id' => 'mistral-medium', 'capabilities' => ['completion_chat' => true]],
+                    ['id' => 'mistral-medium-2604', 'capabilities' => ['completion_chat' => true]],
+                    ['id' => 'mistral-medium-3', 'capabilities' => ['completion_chat' => true]],
+                    ['id' => 'mistral-medium-3-5', 'capabilities' => ['completion_chat' => true]],
+                    ['id' => 'mistral-medium-3.5', 'capabilities' => ['completion_chat' => true]],
+                    ['id' => 'mistral-medium-latest', 'capabilities' => ['completion_chat' => true]],
+                ],
+            ])
+        );
+
+        $directory = new MockProviderForMistralModelMetadataDirectory();
+        $models = $directory->exposeParseResponseToModelMetadataList($response);
+
+        $ids = array_map(static fn (ModelMetadata $m): string => $m->getId(), $models);
+
+        $this->assertSame(
+            [
+                'mistral-large-latest',
+                'mistral-large-4',
+                'mistral-large-4-0',
+                'mistral-large-2512',
+                'mistral-medium-latest',
+                'mistral-medium-3-5',
+                'mistral-medium-3.5',
+                'mistral-medium-3',
+                'mistral-medium-2604',
+                'mistral-medium',
+            ],
+            $ids
+        );
+    }
+
+    /**
      * Tests that every chat model advertises a text+document input modality.
      */
     public function testDocumentInputModalityOnChatModels(): void
