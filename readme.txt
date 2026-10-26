@@ -87,6 +87,9 @@ Filters the maximum number of characters narrated in a single text-to-speech req
 * Clone a voice for a single request by adding a short audio recording to the prompt.
 * Narrate long text in several requests and join the audio into one file.
 * New `ai_provider_for_mistral_default_voice_id` and `ai_provider_for_mistral_tts_max_text_length` filters.
+* Sort version-numbered model ids (such as `mistral-large-4`) above dated ids (such as `mistral-large-2512`), so the newest models in a family are listed first.
+* Only force a tool call on the opening turn of a conversation, so agent loops that replay their transcript as text can get a final answer. A `tool_choice` set through custom options is no longer overwritten. Props @TimVanOnckelen.
+* Handle Mistral's `model_length` and `error` finish reasons instead of reporting them as an invalid response. Props @TimVanOnckelen.
 
 = 1.2.1 =
 * Fix image generation failing with "Missing the "file_id" key". Mistral now returns generated images as a URL instead of a file ID; both formats are supported.
