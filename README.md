@@ -134,9 +134,28 @@ $binaryData = base64_decode($file->getBase64Data(), true);
 file_put_contents('apple.png', $binaryData);
 ```
 
+### Text-to-Speech
+
+Mistral's Voxtral TTS models convert text into speech. Choose a voice with `asOutputSpeechVoice()`, using a [preset voice](https://docs.mistral.ai/studio/audio/text-to-speech/voices) or the ID of a voice saved in your workspace. Without a voice, an English preset voice is used.
+
+```php
+$file = AiClient::prompt('Your order shipped this morning and should arrive on Thursday.')
+    ->usingModel(ProviderForMistral::model('voxtral-mini-tts-3-0'))
+    ->asOutputSpeechVoice('voice_485')
+    ->convertTextToSpeech();
+
+file_put_contents('order-update.mp3', base64_decode($file->getBase64Data(), true));
+```
+
+- **Format:** MP3 by default. Request another format with `asOutputMimeType()`: `audio/wav`, `audio/flac`, `audio/ogg` (Opus), or `audio/pcm` (raw 32-bit float samples at 24 kHz).
+- **Voice cloning:** add a short recording to the prompt as an inline audio file, and Mistral narrates the text in that voice for this request only.
+- **Long text:** text over 2000 characters is split at paragraph and sentence boundaries, narrated in several requests, and joined into one file. Joining works for MP3 and PCM only, so other formats throw an exception for long text. Change the limit with the `ai_provider_for_mistral_tts_max_text_length` filter.
+- **Volume on long text:** Voxtral TTS 3 currently gets quieter over longer passages and jumps back up at each new segment, which Mistral has confirmed as a known limitation. For long-form narration, use `voxtral-mini-tts-2603`. When the provider picks the model, it uses `voxtral-mini-tts-latest`, which points to that model for now.
+- **Other options:** pass Mistral parameters such as `expressiveness` or `phoneme_hints` with `usingModelConfig()` custom options. Emotion and pace tags go inline in the text.
+
 ## Supported Models
 
-Available models are dynamically discovered from the Mistral API. This includes text models and, for compatible models, vision and function-calling capabilities. Image generation is supported through models like `mistral-medium-2505`. See the [Mistral documentation](https://docs.mistral.ai/) for the full list of available models.
+Available models are dynamically discovered from the Mistral API. This includes text models and, for compatible models, vision and function-calling capabilities. Image generation is supported through models like `mistral-medium-2505`, and text-to-speech through the Voxtral TTS models such as `voxtral-mini-tts-3-0`. See the [Mistral documentation](https://docs.mistral.ai/) for the full list of available models.
 
 ## Configuration
 
@@ -148,7 +167,7 @@ putenv('MISTRAL_API_KEY=your-api-key');
 
 ## External Services
 
-This plugin connects to the [Mistral AI API](https://api.mistral.ai/v1) to provide AI text generation and image generation capabilities.
+This plugin connects to the [Mistral AI API](https://api.mistral.ai/v1) to provide AI text generation, image generation, and text-to-speech capabilities.
 
 Data is sent to the Mistral API when your application code makes AI generation requests through the PHP AI Client. The data sent includes your prompts, model configuration, and API key. No data is sent automatically — requests only occur when explicitly triggered by code using the PHP AI Client SDK.
 
