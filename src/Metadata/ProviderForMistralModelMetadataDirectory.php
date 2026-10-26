@@ -329,14 +329,28 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
             return 1;
         }
 
-        // 5. Newer dated variants before older ones.
+        // 5. Version-numbered ids (`mistral-large-4`) replaced the dated scheme (`mistral-large-2512`), so they
+        //    come before dated ids, and higher versions come first.
+        $aVersion = $this->modelVersion($aId);
+        $bVersion = $this->modelVersion($bId);
+        if ($aVersion !== null && $bVersion === null) {
+            return -1;
+        }
+        if ($bVersion !== null && $aVersion === null) {
+            return 1;
+        }
+        if ($aVersion !== null && $bVersion !== null && $aVersion !== $bVersion) {
+            return $bVersion <=> $aVersion;
+        }
+
+        // 6. Newer dated variants before older ones.
         $aDate = $this->modelDateStamp($aId);
         $bDate = $this->modelDateStamp($bId);
         if ($aDate !== $bDate) {
             return $bDate <=> $aDate;
         }
 
-        // 6. Fallback: deterministic alphabetical.
+        // 7. Fallback: deterministic alphabetical.
         return strcmp($aId, $bId);
     }
 
@@ -389,6 +403,30 @@ class ProviderForMistralModelMetadataDirectory extends AbstractOpenAiCompatibleM
         }
 
         return 200;
+    }
+
+    /**
+     * Extracts a version number from a model id suffix, if present.
+     *
+     * Matches up to three 1–2 digit segments separated by `-` or `.`, so `mistral-large-4`, `mistral-large-4-0`
+     * and `mistral-medium-3.5` are versioned, while 4-digit YYMM stamps such as `mistral-large-2512` are not.
+     *
+     * @since n.e.x.t
+     *
+     * @param string $id Model id.
+     * @return array{int, int, int}|null Major, minor and patch numbers, or null if the id has no version suffix.
+     */
+    private function modelVersion(string $id): ?array
+    {
+        if (!preg_match('/-(\d{1,2})(?:[-.](\d{1,2}))?(?:[-.](\d{1,2}))?$/', $id, $matches)) {
+            return null;
+        }
+
+        return [
+            (int) $matches[1],
+            (int) ($matches[2] ?? 0),
+            (int) ($matches[3] ?? 0),
+        ];
     }
 
     /**
