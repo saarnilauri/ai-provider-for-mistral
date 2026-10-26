@@ -11,6 +11,7 @@ use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Messages\DTO\MessagePart;
 use WordPress\AiClient\Providers\Http\DTO\Request;
 use WordPress\AiClient\Providers\Http\Enums\HttpMethodEnum;
+use WordPress\AiClient\Providers\Http\Exception\ServerException;
 use WordPress\AiClient\Providers\OpenAiCompatibleImplementation\AbstractOpenAiCompatibleTextGenerationModel;
 use WordPress\AiClient\Results\DTO\Candidate;
 use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
@@ -27,17 +28,35 @@ class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleText
     /**
      * {@inheritDoc}
      *
-     * Overrides the base implementation to throw a {@see TokenLimitReachedException}
-     * when the finish reason is "length", which Mistral uses to signal that the
-     * configured max_tokens limit was reached.
+     * Overrides the base implementation to handle the finish reasons that are
+     * specific to Mistral. Its schema defines five - `stop`, `length`,
+     * `model_length`, `error` and `tool_calls` - while the OpenAI-compatible
+     * base class knows `stop`, `length`, `content_filter` and `tool_calls`, so
+     * the two Mistral-only reasons would otherwise reach the base class and be
+     * reported as a malformed response.
+     *
+     * - `length` signals that the configured max_tokens limit was reached.
+     * - `model_length` signals that the model's own context length was reached.
+     *   Both become a {@see TokenLimitReachedException}.
+     * - `error` signals that generation failed on Mistral's side. The HTTP
+     *   status is still 200, so nothing else in the stack notices; it is
+     *   reported as a {@see ServerException} because that is what it is - an
+     *   upstream failure, and one the caller can sensibly retry, rather than a
+     *   response this provider could not understand.
      *
      * @since 0.3.0
      *
      * @param ChoiceData $choiceData
+     * @throws TokenLimitReachedException If generation stopped at a token limit.
+     * @throws ServerException If generation failed on the provider side.
      */
     protected function parseResponseChoiceToCandidate(array $choiceData, int $index): Candidate
     {
-        if (isset($choiceData['finish_reason']) && 'length' === $choiceData['finish_reason']) {
+        $finishReason = isset($choiceData['finish_reason']) && is_string($choiceData['finish_reason'])
+            ? $choiceData['finish_reason']
+            : '';
+
+        if ('length' === $finishReason) {
             $maxTokens = $this->getConfig()->getMaxTokens();
             // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
             throw new TokenLimitReachedException(
@@ -45,6 +64,31 @@ class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleText
                     ? sprintf('Generation stopped due to token limit (%d) with finish reason "length".', $maxTokens)
                     : 'Generation stopped due to token limit with finish reason "length".',
                 $maxTokens
+            );
+        }
+
+        if ('model_length' === $finishReason) {
+            // Not the configured limit but the model's own, so no max tokens
+            // value is passed: there is none to report.
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+            throw new TokenLimitReachedException(
+                'Generation stopped because the model context length was reached '
+                . 'with finish reason "model_length".'
+            );
+        }
+
+        if ('error' === $finishReason) {
+            // Interim mapping: FinishReasonEnum::error() exists in php-ai-client but the OpenAI-compatible base
+            // class never produces it. Once it does upstream, return the candidate with that reason instead, so
+            // partial content is kept and the caller decides whether to retry.
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+            throw new ServerException(
+                sprintf(
+                    'Mistral stopped generating with finish reason "error" for choice %d, '
+                    . 'which indicates a failure on the provider side. The request can be retried.',
+                    $index
+                ),
+                500
             );
         }
 
