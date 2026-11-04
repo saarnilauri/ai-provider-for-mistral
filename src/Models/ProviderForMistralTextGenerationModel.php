@@ -9,6 +9,7 @@ use WordPress\AiClient\Common\Exception\InvalidArgumentException;
 use WordPress\AiClient\Common\Exception\TokenLimitReachedException;
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Messages\DTO\MessagePart;
+use WordPress\AiClient\Messages\Enums\MessagePartChannelEnum;
 use WordPress\AiClient\Providers\Http\DTO\Request;
 use WordPress\AiClient\Providers\Http\Enums\HttpMethodEnum;
 use WordPress\AiClient\Providers\Http\Exception\ServerException;
@@ -22,6 +23,14 @@ use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
  * @since 0.1.0
  *
  * @phpstan-import-type ChoiceData from AbstractOpenAiCompatibleTextGenerationModel
+ * @phpstan-import-type ToolCallData from AbstractOpenAiCompatibleTextGenerationModel
+ *
+ * @phpstan-type MistralMessageData array{
+ *     role?: string,
+ *     reasoning_content?: string,
+ *     content?: string|list<array<string, mixed>>,
+ *     tool_calls?: list<ToolCallData>
+ * }
  */
 class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleTextGenerationModel
 {
@@ -93,6 +102,71 @@ class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleText
         }
 
         return parent::parseResponseChoiceToCandidate($choiceData, $index);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Reasoning models (Magistral, Mistral Large 4, and any model called with
+     * `reasoning_effort`) return `content` as a list of chunks rather than a
+     * string: a `thinking` chunk holding its own list of text chunks, then the
+     * answer as `text` chunks. The OpenAI-compatible base class reads string
+     * content only, so without this the answer is silently dropped and the
+     * result has no parts.
+     *
+     * Thinking becomes a thought-channel part, the answer text a content part.
+     * Tool calls and string content are still handled by the base class.
+     *
+     * @since n.e.x.t
+     *
+     * @param MistralMessageData $messageData The message data from the API response.
+     * @param int                $index       The index of the choice in the choices array.
+     * @return MessagePart[] The parsed message parts.
+     */
+    protected function parseResponseChoiceMessageParts(array $messageData, int $index): array
+    {
+        $content = $messageData['content'] ?? null;
+        unset($messageData['content']);
+
+        if (!is_array($content)) {
+            if (is_string($content)) {
+                $messageData['content'] = $content;
+            }
+
+            return parent::parseResponseChoiceMessageParts($messageData, $index);
+        }
+
+        $thinking = '';
+        $text = '';
+
+        foreach ($content as $chunk) {
+            if (!is_array($chunk)) {
+                continue;
+            }
+
+            $type = $chunk['type'] ?? '';
+
+            if ('thinking' === $type && isset($chunk['thinking']) && is_array($chunk['thinking'])) {
+                foreach ($chunk['thinking'] as $thought) {
+                    if (is_array($thought) && isset($thought['text']) && is_string($thought['text'])) {
+                        $thinking .= $thought['text'];
+                    }
+                }
+            } elseif ('text' === $type && isset($chunk['text']) && is_string($chunk['text'])) {
+                $text .= $chunk['text'];
+            }
+        }
+
+        $parts = [];
+
+        if ('' !== $thinking) {
+            $parts[] = new MessagePart($thinking, MessagePartChannelEnum::thought());
+        }
+        if ('' !== $text) {
+            $parts[] = new MessagePart($text);
+        }
+
+        return array_merge($parts, parent::parseResponseChoiceMessageParts($messageData, $index));
     }
 
     /**
