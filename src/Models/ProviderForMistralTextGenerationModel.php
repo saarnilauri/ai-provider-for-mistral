@@ -117,7 +117,7 @@ class ProviderForMistralTextGenerationModel extends AbstractOpenAiCompatibleText
      * Thinking becomes a thought-channel part, the answer text a content part.
      * Tool calls and string content are still handled by the base class.
      *
-     * @since n.e.x.t
+     * @since 1.3.1
      *
      * @param MistralMessageData $messageData The message data from the API response.
      * @param int                $index       The index of the choice in the choices array.

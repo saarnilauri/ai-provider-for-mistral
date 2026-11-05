@@ -3,7 +3,7 @@ Contributors: laurisaarni
 Tags: ai, mistral, artificial-intelligence, connector
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -82,7 +82,7 @@ Filters the maximum number of characters narrated in a single text-to-speech req
 
 == Changelog ==
 
-= n.e.x.t =
+= 1.3.1 =
 * Fix empty responses from reasoning models, such as Magistral, Mistral Large 4, or any model called with a reasoning effort. Their answer is now read from the chunked message content, and their thinking is returned as a thought part.
 
 = 1.3.0 =
