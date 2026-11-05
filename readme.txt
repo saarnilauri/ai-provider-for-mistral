@@ -82,6 +82,9 @@ Filters the maximum number of characters narrated in a single text-to-speech req
 
 == Changelog ==
 
+= n.e.x.t =
+* Fix empty responses from reasoning models, such as Magistral, Mistral Large 4, or any model called with a reasoning effort. Their answer is now read from the chunked message content, and their thinking is returned as a thought part.
+
 = 1.3.0 =
 * Add text-to-speech with the Mistral Voxtral TTS models, such as Voxtral TTS 3 (`voxtral-mini-tts-3-0`). Use `convertTextToSpeech()` or `generateSpeech()`, choose a voice with `asOutputSpeechVoice()` and a format with `asOutputMimeType()` (MP3, WAV, FLAC, Opus, or PCM).
 * Clone a voice for a single request by adding a short audio recording to the prompt.
