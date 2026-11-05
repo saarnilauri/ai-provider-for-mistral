@@ -10,6 +10,7 @@ use WordPress\AiClient\Common\Exception\TokenLimitReachedException;
 use WordPress\AiClient\Files\DTO\File;
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Messages\DTO\MessagePart;
+use WordPress\AiClient\Messages\Enums\MessagePartChannelEnum;
 use WordPress\AiClient\Messages\Enums\MessageRoleEnum;
 use WordPress\AiClient\Providers\DTO\ProviderMetadata;
 use WordPress\AiClient\Providers\Http\Contracts\HttpTransporterInterface;
@@ -133,6 +134,63 @@ class ProviderForMistralTextGenerationModelTest extends TestCase
         $this->assertSame(10, $result->getTokenUsage()->getPromptTokens());
         $this->assertSame(5, $result->getTokenUsage()->getCompletionTokens());
         $this->assertSame(15, $result->getTokenUsage()->getTotalTokens());
+    }
+
+    /**
+     * Tests that reasoning models' chunked content is parsed into a thought part and the answer.
+     */
+    public function testGenerateTextResultParsesReasoningContentChunks(): void
+    {
+        $prompt = [new Message(MessageRoleEnum::user(), [new MessagePart('Capital of Finland?')])];
+        $response = new Response(
+            200,
+            [],
+            json_encode([
+                'id' => 'chatcmpl_456',
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'tool_calls' => null,
+                            'content' => [
+                                [
+                                    'type' => 'thinking',
+                                    'thinking' => [
+                                        ['type' => 'text', 'text' => 'The capital of Finland '],
+                                        ['type' => 'text', 'text' => 'is Helsinki.'],
+                                    ],
+                                    'closed' => true,
+                                ],
+                                ['type' => 'text', 'text' => 'Hel'],
+                                ['type' => 'text', 'text' => 'sinki'],
+                            ],
+                        ],
+                        'finish_reason' => 'stop',
+                    ],
+                ],
+                'usage' => ['prompt_tokens' => 32, 'completion_tokens' => 62, 'total_tokens' => 94],
+            ])
+        );
+
+        $this->mockRequestAuthentication
+            ->expects($this->once())
+            ->method('authenticateRequest')
+            ->willReturnArgument(0);
+
+        $this->mockHttpTransporter
+            ->expects($this->once())
+            ->method('send')
+            ->willReturn($response);
+
+        $result = $this->createModel()->generateTextResult($prompt);
+        $parts = $result->getCandidates()[0]->getMessage()->getParts();
+
+        $this->assertCount(2, $parts);
+        $this->assertEquals(MessagePartChannelEnum::thought(), $parts[0]->getChannel());
+        $this->assertSame('The capital of Finland is Helsinki.', $parts[0]->getText());
+        $this->assertEquals(MessagePartChannelEnum::content(), $parts[1]->getChannel());
+        $this->assertSame('Helsinki', $parts[1]->getText());
+        $this->assertSame('Helsinki', $result->toText());
     }
 
     /**
